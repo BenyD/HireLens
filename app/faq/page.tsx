@@ -1,17 +1,28 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { motion } from "framer-motion"
+import { useEffect } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Header from "@/components/header";
+import Footer from "@/components/footer";
+import { motion } from "framer-motion";
 
 export default function FAQPage() {
   // Scroll to top when component mounts
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
+    window.scrollTo(0, 0);
+  }, []);
 
   const faqs = [
     {
@@ -54,7 +65,7 @@ export default function FAQPage() {
       answer:
         "Yes, HireLens is completely free to use. We believe everyone should have access to tools that help them land their dream job without financial barriers.",
     },
-  ]
+  ];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -73,21 +84,32 @@ export default function FAQPage() {
                   Frequently Asked Questions
                 </h1>
                 <p className="text-muted-foreground md:text-lg">
-                  Find answers to common questions about HireLens and how it can help you land your dream job.
+                  Find answers to common questions about HireLens and how it can
+                  help you land your dream job.
                 </p>
               </div>
 
               <Card className="card-highlight">
                 <CardHeader>
                   <CardTitle>Common Questions</CardTitle>
-                  <CardDescription>Everything you need to know about HireLens</CardDescription>
+                  <CardDescription>
+                    Everything you need to know about HireLens
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Accordion type="single" collapsible className="w-full">
                     {faqs.map((faq, index) => (
-                      <AccordionItem key={index} value={`item-${index}`} className="border-b-primary/10">
-                        <AccordionTrigger className="text-left hover:text-primary">{faq.question}</AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
+                      <AccordionItem
+                        key={index}
+                        value={`item-${index}`}
+                        className="border-b-primary/10"
+                      >
+                        <AccordionTrigger className="text-left hover:text-primary">
+                          {faq.question}
+                        </AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground">
+                          {faq.answer}
+                        </AccordionContent>
                       </AccordionItem>
                     ))}
                   </Accordion>
@@ -97,8 +119,11 @@ export default function FAQPage() {
               <div className="text-center">
                 <p className="text-muted-foreground">
                   Still have questions? Contact us at{" "}
-                  <a href="mailto:support@hirelens.com" className="text-primary hover:underline">
-                    support@hirelens.com
+                  <a
+                    href="mailto:benydishon@gmail.com"
+                    className="text-primary hover:underline"
+                  >
+                    benydishon@gmail.com
                   </a>
                 </p>
               </div>
@@ -108,6 +133,5 @@ export default function FAQPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
-
