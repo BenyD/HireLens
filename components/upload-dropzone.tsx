@@ -1,91 +1,92 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { FileText, Upload, X, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { FileText, Upload, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function UploadDropzone() {
-  const [file, setFile] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const onDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      setIsDragging(false)
+      e.preventDefault();
+      setIsDragging(false);
 
-      const droppedFile = e.dataTransfer.files[0]
+      const droppedFile = e.dataTransfer.files[0];
       if (droppedFile && droppedFile.type === "application/pdf") {
-        setFile(droppedFile)
+        setFile(droppedFile);
       } else {
         toast({
           title: "Invalid file format",
           description: "Please upload a PDF file.",
           variant: "destructive",
-        })
+        });
       }
     },
-    [toast],
-  )
+    [toast]
+  );
 
   const onFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFile = e.target.files?.[0]
+      const selectedFile = e.target.files?.[0];
       if (selectedFile && selectedFile.type === "application/pdf") {
-        setFile(selectedFile)
+        setFile(selectedFile);
       } else if (selectedFile) {
         toast({
           title: "Invalid file format",
           description: "Please upload a PDF file.",
           variant: "destructive",
-        })
+        });
       }
     },
-    [toast],
-  )
+    [toast]
+  );
 
   const removeFile = useCallback(() => {
-    setFile(null)
-  }, [])
+    setFile(null);
+  }, []);
 
   const handleUpload = useCallback(() => {
-    if (!file) return
+    if (!file) return;
 
-    setIsUploading(true)
+    setIsUploading(true);
 
     // Simulate upload process
     setTimeout(() => {
-      setIsUploading(false)
+      setIsUploading(false);
       toast({
         title: "Resume uploaded successfully",
-        description: "Your resume has been uploaded. Proceeding to the next step.",
-      })
-      router.push("/job-description")
-    }, 2000)
+        description:
+          "Your resume has been uploaded. Proceeding to the next step.",
+      });
+      router.push("/job-description");
+    }, 2000);
 
     // In a real app, you would upload the file to your server here
     // const formData = new FormData();
     // formData.append("resume", file);
     // await fetch("/api/upload-resume", { method: "POST", body: formData });
-  }, [file, router, toast])
+  }, [file, router, toast]);
 
   return (
     <div className="w-full">
@@ -100,7 +101,9 @@ export default function UploadDropzone() {
           >
             <Card
               className={`border-2 border-dashed ${
-                isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/20"
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/20"
               } transition-colors duration-200`}
             >
               <CardContent
@@ -114,26 +117,29 @@ export default function UploadDropzone() {
                 </div>
                 <div className="flex flex-col items-center justify-center text-center space-y-2">
                   <h3 className="text-lg font-semibold">Upload your resume</h3>
-                  <p className="text-sm text-muted-foreground">Drag and drop your PDF file here, or click to browse</p>
+                  <p className="text-sm text-muted-foreground">
+                    Drag and drop your PDF file here, or click to browse
+                  </p>
                   <p className="text-xs text-muted-foreground">PDF (max 5MB)</p>
                 </div>
-                <label htmlFor="resume-upload">
-                  <div className="relative">
-                    <input
-                      id="resume-upload"
-                      type="file"
-                      className="sr-only"
-                      accept="application/pdf"
-                      onChange={onFileChange}
-                    />
-                    <Button
-                      variant="outline"
-                      className="mt-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20"
-                    >
-                      Browse Files
-                    </Button>
-                  </div>
-                </label>
+                <div className="relative">
+                  <input
+                    id="resume-upload"
+                    type="file"
+                    className="sr-only"
+                    accept="application/pdf"
+                    onChange={onFileChange}
+                  />
+                  <Button
+                    variant="outline"
+                    className="mt-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20"
+                    onClick={() =>
+                      document.getElementById("resume-upload")?.click()
+                    }
+                  >
+                    Browse Files
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -154,7 +160,9 @@ export default function UploadDropzone() {
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
                     </div>
                   </div>
                   <Button
@@ -169,7 +177,11 @@ export default function UploadDropzone() {
                   </Button>
                 </div>
                 <div className="mt-4 flex justify-end">
-                  <Button onClick={handleUpload} disabled={isUploading} className="btn-primary">
+                  <Button
+                    onClick={handleUpload}
+                    disabled={isUploading}
+                    className="btn-primary"
+                  >
                     {isUploading ? (
                       <>
                         <Loader2 size={16} className="mr-2 animate-spin" />
@@ -186,6 +198,5 @@ export default function UploadDropzone() {
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
-
