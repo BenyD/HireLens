@@ -1,5 +1,10 @@
-import Link from "next/link"
-import { Github, Twitter, Linkedin, Heart } from "lucide-react"
+import Link from "next/link";
+import {
+  GithubLogo,
+  TwitterLogo,
+  LinkedinLogo,
+  Heart,
+} from "@phosphor-icons/react";
 
 export default function Footer() {
   return (
@@ -16,29 +21,54 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-            <Link href="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               Home
             </Link>
-            <Link href="/#features" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/#features"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               Features
             </Link>
-            <Link href="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/faq"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               FAQ
             </Link>
-            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/privacy"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               Privacy
             </Link>
           </div>
 
           <div className="flex gap-4">
-            <Link href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-              <Github size={20} className="text-muted-foreground hover:text-primary transition-colors" />
+            <Link
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+            >
+              <GithubLogo
+                size={20}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              />
             </Link>
-            <Link href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-              <Twitter size={20} className="text-muted-foreground hover:text-primary transition-colors" />
-            </Link>
-            <Link href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-              <Linkedin size={20} className="text-muted-foreground hover:text-primary transition-colors" />
+            <Link
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+            >
+              <LinkedinLogo
+                size={20}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              />
             </Link>
           </div>
         </div>
@@ -50,13 +80,20 @@ export default function Footer() {
 
           <div className="flex items-center mt-4 md:mt-0">
             <p className="text-sm text-muted-foreground flex items-center">
-              Developed with <Heart size={14} className="mx-1 text-color-danger" /> by
-              <span className="font-medium text-primary ml-1">Beny Dishon K</span>
+              Developed with{" "}
+              <Heart
+                size={14}
+                weight="fill"
+                className="mx-1 text-color-danger"
+              />{" "}
+              by
+              <span className="font-medium text-primary ml-1">
+                Beny Dishon K
+              </span>
             </p>
           </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }
-
