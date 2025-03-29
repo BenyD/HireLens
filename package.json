@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "vercel-build": "npm install --legacy-peer-deps --prefer-offline --no-audit --progress=false && next build"
+    "vercel-build": "npm install && next build"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -50,7 +50,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
-    "date-fns": "^3.3.1",
+    "date-fns": "3.0.6",
     "docx": "^9.3.0",
     "docx-parser": "^0.2.1",
     "embla-carousel-react": "8.5.1",
@@ -83,7 +83,6 @@
     "typescript": "^5"
   },
   "overrides": {
-    "date-fns": "^3.0.0",
     "react-day-picker": "8.10.1"
   }
 }
