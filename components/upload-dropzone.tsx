@@ -66,26 +66,50 @@ export default function UploadDropzone() {
     setFile(null);
   }, []);
 
-  const handleUpload = useCallback(() => {
+  const handleUpload = useCallback(async () => {
     if (!file) return;
 
     setIsUploading(true);
 
-    // Simulate upload process
-    setTimeout(() => {
-      setIsUploading(false);
+    try {
+      // Create form data for the upload
+      const formData = new FormData();
+      formData.append("resume", file);
+
+      // Upload the file to the API
+      const response = await fetch("/api/upload/resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to upload resume");
+      }
+
+      // Show success toast
       toast({
         title: "Resume uploaded successfully",
         description:
-          "Your resume has been uploaded. Proceeding to the next step.",
+          "Your resume has been processed. Proceeding to the next step.",
       });
-      router.push("/job-description");
-    }, 2000);
 
-    // In a real app, you would upload the file to your server here
-    // const formData = new FormData();
-    // formData.append("resume", file);
-    // await fetch("/api/upload-resume", { method: "POST", body: formData });
+      // Navigate to job description page
+      router.push("/job-description");
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      toast({
+        title: "Upload failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   }, [file, router, toast]);
 
   return (

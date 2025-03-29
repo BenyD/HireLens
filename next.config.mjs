@@ -1,6 +1,6 @@
-let userConfig = undefined
+let userConfig = undefined;
 try {
-  userConfig = await import('./v0-user-next.config')
+  userConfig = await import("./v0-user-next.config");
 } catch (e) {
   // ignore error
 }
@@ -21,28 +21,42 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-}
+  // Configure webpack to handle binary files
+  webpack: (config, { isServer }) => {
+    // Add handling for PDF and DOCX files
+    config.module.rules.push({
+      test: /\.(pdf|docx)$/i,
+      type: "asset/resource",
+    });
 
-mergeConfig(nextConfig, userConfig)
+    return config;
+  },
+  // Increase serverless function timeout for Vercel (if supported)
+  serverRuntimeConfig: {
+    PROJECT_ROOT: process.cwd(),
+  },
+};
+
+mergeConfig(nextConfig, userConfig);
 
 function mergeConfig(nextConfig, userConfig) {
   if (!userConfig) {
-    return
+    return;
   }
 
   for (const key in userConfig) {
     if (
-      typeof nextConfig[key] === 'object' &&
+      typeof nextConfig[key] === "object" &&
       !Array.isArray(nextConfig[key])
     ) {
       nextConfig[key] = {
         ...nextConfig[key],
         ...userConfig[key],
-      }
+      };
     } else {
-      nextConfig[key] = userConfig[key]
+      nextConfig[key] = userConfig[key];
     }
   }
 }
 
-export default nextConfig
+export default nextConfig;

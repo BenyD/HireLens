@@ -1,57 +1,63 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { FileIcon as FilePdf, Upload, FileQuestionIcon as FileDoc, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { motion } from "framer-motion"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  FileIcon as FilePdf,
+  Upload,
+  FileQuestionIcon as FileDoc,
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import Header from "@/components/header";
+import Footer from "@/components/footer";
+import { motion } from "framer-motion";
 
 export default function JobDescriptionPage() {
-  const [jobDescription, setJobDescription] = useState("")
-  const [file, setFile] = useState<File | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("paste")
-  const router = useRouter()
-  const { toast } = useToast()
+  const [jobDescription, setJobDescription] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("paste");
+  const router = useRouter();
+  const { toast } = useToast();
 
   // Scroll to top when component mounts
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
+    const selectedFile = e.target.files?.[0];
     if (
       selectedFile &&
       (selectedFile.type === "application/pdf" ||
-        selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        selectedFile.type ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     ) {
-      setFile(selectedFile)
+      setFile(selectedFile);
     } else if (selectedFile) {
       toast({
         title: "Invalid file format",
         description: "Please upload a PDF or DOCX file.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (activeTab === "paste" && !jobDescription.trim()) {
       toast({
         title: "Job description required",
         description: "Please enter a job description.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (activeTab === "upload" && !file) {
@@ -59,27 +65,55 @@ export default function JobDescriptionPage() {
         title: "File required",
         description: "Please upload a job description file.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
-    // Simulate processing
-    setTimeout(() => {
-      setIsLoading(false)
-      router.push("/analysis")
-    }, 2000)
+    try {
+      // Create form data for the upload/submission
+      const formData = new FormData();
 
-    // In a real app, you would process the job description here
-    // const formData = new FormData();
-    // if (activeTab === "upload" && file) {
-    //   formData.append("jobDescriptionFile", file);
-    // } else {
-    //   formData.append("jobDescriptionText", jobDescription);
-    // }
-    // await fetch("/api/process-job-description", { method: "POST", body: formData });
-  }
+      if (activeTab === "upload" && file) {
+        formData.append("jobDescription", file);
+      } else {
+        formData.append("jobDescriptionText", jobDescription);
+      }
+
+      // Submit to the API
+      const response = await fetch("/api/upload/job-description", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process job description");
+      }
+
+      // Success - navigate to analysis page
+      toast({
+        title: "Job description processed",
+        description: "Proceeding to analysis...",
+      });
+
+      router.push("/analysis");
+    } catch (error) {
+      console.error("Error processing job description:", error);
+      toast({
+        title: "Processing failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -98,11 +132,16 @@ export default function JobDescriptionPage() {
                   Add Job Description
                 </h1>
                 <p className="text-muted-foreground md:text-lg">
-                  Provide the job description you're applying for to get tailored resume feedback.
+                  Provide the job description you're applying for to get
+                  tailored resume feedback.
                 </p>
               </div>
 
-              <Tabs defaultValue="paste" onValueChange={setActiveTab} className="w-full">
+              <Tabs
+                defaultValue="paste"
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="paste">Paste Text</TabsTrigger>
                   <TabsTrigger value="upload">Upload File</TabsTrigger>
@@ -127,8 +166,12 @@ export default function JobDescriptionPage() {
                           <Upload size={24} className="text-primary" />
                         </div>
                         <div className="space-y-1 text-center">
-                          <p className="text-sm font-medium">Upload job description file</p>
-                          <p className="text-xs text-muted-foreground">PDF or DOCX (max 5MB)</p>
+                          <p className="text-sm font-medium">
+                            Upload job description file
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PDF or DOCX (max 5MB)
+                          </p>
                         </div>
                         <label htmlFor="job-description-upload">
                           <div className="relative">
@@ -165,11 +208,15 @@ export default function JobDescriptionPage() {
               </Tabs>
 
               <div className="flex justify-end">
-                <Button onClick={handleSubmit} disabled={isLoading} className="btn-gradient">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="btn-gradient"
+                >
                   {isLoading ? (
                     <>
                       <Loader2 size={16} className="mr-2 animate-spin" />
-                      Analyzing...
+                      Processing...
                     </>
                   ) : (
                     "Analyze Resume"
@@ -182,6 +229,5 @@ export default function JobDescriptionPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
-
