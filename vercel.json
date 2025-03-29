@@ -13,6 +13,10 @@
     "app/api/analyze/route.ts": {
       "memory": 1024,
       "maxDuration": 60
+    },
+    "app/api/cleanup/route.ts": {
+      "memory": 1024,
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -40,6 +44,28 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/images/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     }

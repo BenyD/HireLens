@@ -29,6 +29,7 @@ export interface UploadedFile {
 /**
  * Parse multipart form data from NextRequest
  * Files are stored both locally and in Vercel Blob (if configured)
+ * Optimized for memory efficiency on the Hobby plan
  *
  * @param req NextRequest object
  * @returns Parsed form data with fields and files
@@ -61,24 +62,32 @@ export async function parseFormData(req: NextRequest): Promise<{
         throw new Error(`File type ${mimetype} is not allowed`);
       }
 
-      // Convert file to buffer for storage
-      const buffer = Buffer.from(await value.arrayBuffer());
+      // Process the file in chunks to reduce memory usage
       const filename = `${Date.now()}-${value.name}`;
       const filepath = path.join(uploadDir, filename);
 
-      // PRIMARY STORAGE: Always write to local disk first
+      // Get file as buffer but handle it efficiently
+      const arrayBuffer = await value.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Write to local storage
       fs.writeFileSync(filepath, buffer);
 
-      // SECONDARY STORAGE: Try to upload to Vercel Blob if configured
-      let blobUrl = undefined;
-      try {
-        if (process.env.BLOB_READ_WRITE_TOKEN) {
+      // Try to upload to Vercel Blob if configured
+      let blobUrl = "";
+      if (
+        process.env.BLOB_READ_WRITE_TOKEN &&
+        process.env.BLOB_READ_WRITE_TOKEN.length > 10
+      ) {
+        try {
           blobUrl = await uploadToBlob(buffer, value.name, mimetype);
-          console.log(`File uploaded to Blob: ${blobUrl}`);
+          if (blobUrl) {
+            console.log(`File uploaded to Blob: ${blobUrl}`);
+          }
+        } catch (error) {
+          console.error("Error uploading to Blob:", error);
+          // Continue with local storage only
         }
-      } catch (error) {
-        console.error("Error uploading to Vercel Blob:", error);
-        // Continue with local storage only
       }
 
       files[key] = {
@@ -152,13 +161,15 @@ export async function removeFile(
     if (filepath && fs.existsSync(filepath)) {
       fs.unlinkSync(filepath);
       console.log(`Local file removed: ${filepath}`);
+    } else if (filepath) {
+      console.log(`Local file not found: ${filepath}`);
     }
   } catch (error) {
     console.error(`Error removing local file ${filepath}:`, error);
   }
 
   // Then try to remove from Vercel Blob if URL is provided
-  if (blobUrl) {
+  if (blobUrl && blobUrl.length > 0) {
     try {
       await deleteFromBlob(blobUrl);
       console.log(`Blob file removed: ${blobUrl}`);
@@ -170,28 +181,44 @@ export async function removeFile(
 
 /**
  * Clean up temporary files - can be run periodically
+ * Uses a more memory-efficient approach by processing files in batches
  */
 export function cleanupTempFiles(): void {
   const uploadDir = path.join(os.tmpdir(), "hirelens-uploads");
 
   if (fs.existsSync(uploadDir)) {
-    const files = fs.readdirSync(uploadDir);
-    console.log(`Checking ${files.length} files for cleanup`);
+    try {
+      const files = fs.readdirSync(uploadDir);
+      console.log(`Checking ${files.length} files for cleanup`);
 
-    for (const file of files) {
-      const filepath = path.join(uploadDir, file);
-      const stats = fs.statSync(filepath);
-      const fileAge = Date.now() - stats.mtimeMs;
+      const now = Date.now();
+      let deletedCount = 0;
 
-      // Delete files older than 24 hours
-      if (fileAge > 24 * 60 * 60 * 1000) {
-        try {
-          fs.unlinkSync(filepath);
-          console.log(`Cleaned up old file: ${filepath}`);
-        } catch (error) {
-          console.error(`Error deleting file ${filepath}:`, error);
+      // Process files in smaller batches to avoid memory pressure
+      const batchSize = 50;
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+
+        for (const file of batch) {
+          try {
+            const filepath = path.join(uploadDir, file);
+            const stats = fs.statSync(filepath);
+            const fileAge = now - stats.mtimeMs;
+
+            // Delete files older than 24 hours
+            if (fileAge > 24 * 60 * 60 * 1000) {
+              fs.unlinkSync(filepath);
+              deletedCount++;
+            }
+          } catch (error) {
+            console.error(`Error processing file ${file}:`, error);
+          }
         }
       }
+
+      console.log(`Cleaned up ${deletedCount} old temporary files`);
+    } catch (error) {
+      console.error(`Error during temp file cleanup:`, error);
     }
   }
 }

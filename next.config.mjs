@@ -8,21 +8,24 @@ try {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
+    // Warning: This allows production builds to successfully complete even with ESLint errors
     ignoreDuringBuilds: true,
   },
   typescript: {
+    // Warning: This allows production builds to successfully complete even with TypeScript errors
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
   },
   experimental: {
+    // Enable supported experimental features
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
   // Configure webpack to handle binary files
-  webpack: (config, { isServer }) => {
+  webpack: (config) => {
     // Add handling for PDF and DOCX files
     config.module.rules.push({
       test: /\.(pdf|docx)$/i,

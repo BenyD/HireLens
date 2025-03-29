@@ -1,6 +1,11 @@
 import { put, list, del } from "@vercel/blob";
 import { v4 as uuidv4 } from "uuid";
 
+// Check if Vercel Blob is configured
+const isBlobConfigured =
+  process.env.BLOB_READ_WRITE_TOKEN &&
+  process.env.BLOB_READ_WRITE_TOKEN.length > 10;
+
 /**
  * Upload a file to Vercel Blob storage
  * @param fileBuffer File buffer to upload
@@ -14,6 +19,12 @@ export async function uploadToBlob(
   contentType: string
 ): Promise<string> {
   try {
+    // Skip if Blob is not configured
+    if (!isBlobConfigured) {
+      console.log("Vercel Blob storage not configured, skipping upload");
+      return "";
+    }
+
     // Generate a unique filename
     const uniqueFilename = `${uuidv4()}-${filename}`;
 
@@ -26,7 +37,8 @@ export async function uploadToBlob(
     return blob.url;
   } catch (error) {
     console.error("Error uploading to Vercel Blob:", error);
-    throw new Error("Failed to upload file to storage");
+    // Return empty string instead of throwing
+    return "";
   }
 }
 
@@ -35,6 +47,11 @@ export async function uploadToBlob(
  * @param url URL of the file to delete
  */
 export async function deleteFromBlob(url: string): Promise<void> {
+  // Skip if Blob is not configured or URL is empty
+  if (!isBlobConfigured || !url) {
+    return;
+  }
+
   try {
     await del(url);
   } catch (error) {
@@ -49,6 +66,11 @@ export async function deleteFromBlob(url: string): Promise<void> {
  * @returns List of files
  */
 export async function listBlobFiles(prefix?: string): Promise<string[]> {
+  // Skip if Blob is not configured
+  if (!isBlobConfigured) {
+    return [];
+  }
+
   try {
     const { blobs } = await list({ prefix });
     return blobs.map((blob) => blob.url);
@@ -65,22 +87,42 @@ export async function listBlobFiles(prefix?: string): Promise<string[]> {
 export async function cleanupOldFiles(
   olderThan: number = 24 * 60 * 60 * 1000
 ): Promise<void> {
+  // Skip if Blob is not configured
+  if (!isBlobConfigured) {
+    return;
+  }
+
   try {
-    const { blobs } = await list();
-
-    // Get files older than the specified time
+    // Use pagination to avoid memory issues with large sets of files
+    let cursor: string | undefined;
+    let deletedCount = 0;
+    const batchSize = 50; // Process in small batches
     const now = Date.now();
-    const oldFiles = blobs.filter((blob) => {
-      const uploadTime = new Date(blob.uploadedAt).getTime();
-      return now - uploadTime > olderThan;
-    });
 
-    // Delete old files
-    for (const file of oldFiles) {
-      await del(file.url);
-    }
+    do {
+      // Get files with pagination
+      const result = await list({ 
+        limit: batchSize,
+        cursor
+      });
 
-    console.log(`Cleaned up ${oldFiles.length} old files`);
+      // Get files older than the specified time
+      const oldFiles = result.blobs.filter((blob) => {
+        const uploadTime = new Date(blob.uploadedAt).getTime();
+        return now - uploadTime > olderThan;
+      });
+
+      // Delete old files in this batch
+      for (const file of oldFiles) {
+        await del(file.url);
+        deletedCount++;
+      }
+
+      // Update cursor for next batch
+      cursor = result.cursor;
+    } while (cursor);
+
+    console.log(`Cleaned up ${deletedCount} old files`);
   } catch (error) {
     console.error("Error cleaning up old files:", error);
   }
