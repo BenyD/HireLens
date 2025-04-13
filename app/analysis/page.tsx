@@ -216,33 +216,38 @@ export default function AnalysisPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 section-bg-subtle">
+        <section className="w-full py-8 md:py-12 lg:py-24 section-bg-subtle">
           <div className="container px-4 md:px-6">
             {currentStep === "resume" && (
               <motion.div
-                className="mx-auto max-w-3xl space-y-8"
+                className="mx-auto max-w-3xl space-y-6 md:space-y-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
                 <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gradient">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter text-gradient">
                     Upload Your Resume
                   </h1>
-                  <p className="text-muted-foreground md:text-lg">
+                  <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
                     Start by uploading your resume in PDF or DOCX format
                   </p>
                 </div>
 
                 <Card className="card-highlight">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col items-center space-y-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                        <Upload size={32} className="text-primary" />
+                      <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-primary/10">
+                        <Upload
+                          size={24}
+                          className="text-primary sm:w-8 sm:h-8"
+                        />
                       </div>
                       <div className="space-y-2 text-center">
-                        <h3 className="text-xl font-semibold">Upload Resume</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="text-lg sm:text-xl font-semibold">
+                          Upload Resume
+                        </h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           PDF or DOCX (max 5MB)
                         </p>
                       </div>
@@ -254,7 +259,7 @@ export default function AnalysisPage() {
                       />
                       <Button
                         variant="outline"
-                        className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20"
+                        className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
                         onClick={() =>
                           document.querySelector('input[type="file"]')?.click()
                         }
@@ -262,9 +267,11 @@ export default function AnalysisPage() {
                         Browse Files
                       </Button>
                       {resumeFile && (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 w-full justify-center">
                           <FileText size={16} className="text-primary" />
-                          <span className="text-sm">{resumeFile.name}</span>
+                          <span className="text-sm truncate max-w-[200px] sm:max-w-none">
+                            {resumeFile.name}
+                          </span>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -290,16 +297,16 @@ export default function AnalysisPage() {
 
             {currentStep === "job-description" && (
               <motion.div
-                className="mx-auto max-w-3xl space-y-8"
+                className="mx-auto max-w-3xl space-y-6 md:space-y-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
                 <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gradient">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter text-gradient">
                     Add Job Description
                   </h1>
-                  <p className="text-muted-foreground md:text-lg">
+                  <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
                     Upload or paste the job description to analyze against your
                     resume
                   </p>
@@ -316,7 +323,7 @@ export default function AnalysisPage() {
                   </TabsList>
                   <TabsContent value="paste" className="mt-4">
                     <Card className="card-highlight">
-                      <CardContent className="pt-6">
+                      <CardContent className="p-4 sm:p-6">
                         <Textarea
                           placeholder="Paste the job description here..."
                           className="min-h-[200px] resize-none border-primary/20 focus-visible:ring-primary/50 dark:border-primary/10"
@@ -330,16 +337,19 @@ export default function AnalysisPage() {
                   </TabsContent>
                   <TabsContent value="upload" className="mt-4">
                     <Card className="card-highlight">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4 sm:p-6">
                         <div className="flex flex-col items-center space-y-4">
-                          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                            <Upload size={32} className="text-primary" />
+                          <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-primary/10">
+                            <Upload
+                              size={24}
+                              className="text-primary sm:w-8 sm:h-8"
+                            />
                           </div>
                           <div className="space-y-2 text-center">
-                            <h3 className="text-xl font-semibold">
+                            <h3 className="text-lg sm:text-xl font-semibold">
                               Upload Job Description
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               PDF or DOCX (max 5MB)
                             </p>
                           </div>
@@ -351,7 +361,7 @@ export default function AnalysisPage() {
                           />
                           <Button
                             variant="outline"
-                            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20"
+                            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
                             onClick={() =>
                               document
                                 .querySelector('input[type="file"]')
@@ -361,9 +371,9 @@ export default function AnalysisPage() {
                             Browse Files
                           </Button>
                           {jobDescriptionFile && (
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 w-full justify-center">
                               <FileText size={16} className="text-primary" />
-                              <span className="text-sm">
+                              <span className="text-sm truncate max-w-[200px] sm:max-w-none">
                                 {jobDescriptionFile.name}
                               </span>
                               <Button
@@ -382,11 +392,11 @@ export default function AnalysisPage() {
                   </TabsContent>
                 </Tabs>
 
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
                   <Button
                     variant="outline"
                     onClick={() => setCurrentStep("resume")}
-                    className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20"
+                    className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
                   >
                     Back
                   </Button>
@@ -398,7 +408,7 @@ export default function AnalysisPage() {
                         ? !jobDescriptionText.trim()
                         : !jobDescriptionFile)
                     }
-                    className="btn-primary"
+                    className="btn-primary w-full sm:w-auto"
                   >
                     {isLoading ? (
                       <>
@@ -415,34 +425,36 @@ export default function AnalysisPage() {
 
             {currentStep === "analysis" && (
               <motion.div
-                className="mx-auto max-w-4xl space-y-8"
+                className="mx-auto max-w-4xl space-y-6 md:space-y-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
                 <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gradient">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter text-gradient">
                     Resume Analysis Results
                   </h1>
-                  <p className="text-muted-foreground md:text-lg">
+                  <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
                     Here's how your resume matches the job description and
                     suggestions for improvement.
                   </p>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   <Card className="card-highlight">
                     <CardHeader className="pb-2">
-                      <CardTitle>Current ATS Score</CardTitle>
-                      <CardDescription>
+                      <CardTitle className="text-lg sm:text-xl">
+                        Current ATS Score
+                      </CardTitle>
+                      <CardDescription className="text-sm">
                         How well your resume matches the job description
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="relative h-32 w-32">
+                        <div className="relative h-24 w-24 sm:h-32 sm:w-32">
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-4xl font-bold">
+                            <span className="text-2xl sm:text-3xl md:text-4xl font-bold">
                               {atsScore}%
                             </span>
                           </div>
@@ -479,16 +491,18 @@ export default function AnalysisPage() {
 
                   <Card className="card-highlight">
                     <CardHeader className="pb-2">
-                      <CardTitle>Potential Improved Score</CardTitle>
-                      <CardDescription>
+                      <CardTitle className="text-lg sm:text-xl">
+                        Potential Improved Score
+                      </CardTitle>
+                      <CardDescription className="text-sm">
                         Expected score after implementing our suggestions
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="relative h-32 w-32">
+                        <div className="relative h-24 w-24 sm:h-32 sm:w-32">
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-4xl font-bold">
+                            <span className="text-2xl sm:text-3xl md:text-4xl font-bold">
                               {improvedScore}%
                             </span>
                           </div>
@@ -526,8 +540,10 @@ export default function AnalysisPage() {
 
                 <Card className="card-highlight">
                   <CardHeader>
-                    <CardTitle>Improvement Suggestions</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">
+                      Improvement Suggestions
+                    </CardTitle>
+                    <CardDescription className="text-sm">
                       Implement these changes to improve your resume's match
                       with the job description
                     </CardDescription>
@@ -540,22 +556,22 @@ export default function AnalysisPage() {
                           value={suggestion.id}
                           className="border-b-primary/10"
                         >
-                          <AccordionTrigger className="flex items-center hover:text-primary">
+                          <AccordionTrigger className="flex items-center hover:text-primary text-sm sm:text-base">
                             <div className="flex items-center gap-2">
                               {suggestion.severity === "high" ? (
                                 <AlertTriangle
-                                  size={20}
+                                  size={16}
                                   className="text-color-danger"
                                 />
                               ) : (
                                 <CheckCircle
-                                  size={20}
+                                  size={16}
                                   className="text-color-warning"
                                 />
                               )}
                               <span>{suggestion.title}</span>
                               <Badge
-                                className={`ml-2 ${getSeverityColor(
+                                className={`ml-2 text-xs ${getSeverityColor(
                                   suggestion.severity
                                 )}`}
                               >
@@ -592,8 +608,10 @@ export default function AnalysisPage() {
 
                 <Card className="card-highlight">
                   <CardHeader>
-                    <CardTitle>Resume Comparison</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">
+                      Resume Comparison
+                    </CardTitle>
+                    <CardDescription className="text-sm">
                       Compare your original resume with our improved version
                     </CardDescription>
                   </CardHeader>
@@ -620,16 +638,18 @@ export default function AnalysisPage() {
                         </div>
                         <div className="rounded-lg border p-4 space-y-4 border-primary/20 dark:border-primary/10">
                           <div>
-                            <h3 className="text-lg font-semibold">John Doe</h3>
-                            <p className="text-sm text-muted-foreground">
+                            <h3 className="text-base sm:text-lg font-semibold">
+                              John Doe
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               Software Developer
                             </p>
                           </div>
                           <div>
-                            <h4 className="text-md font-medium">
+                            <h4 className="text-sm sm:text-base font-medium">
                               Professional Summary
                             </h4>
-                            <p className="text-sm">
+                            <p className="text-xs sm:text-sm">
                               Software developer with 5 years of experience in
                               web development and application design.
                               <span className="bg-color-danger/20 px-1 mx-1 rounded">
@@ -638,16 +658,18 @@ export default function AnalysisPage() {
                             </p>
                           </div>
                           <div>
-                            <h4 className="text-md font-medium">Experience</h4>
+                            <h4 className="text-sm sm:text-base font-medium">
+                              Experience
+                            </h4>
                             <div className="space-y-2">
                               <div>
-                                <p className="text-sm font-medium">
+                                <p className="text-xs sm:text-sm font-medium">
                                   Software Developer, ABC Company
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Jan 2020 - Present
                                 </p>
-                                <ul className="text-sm list-disc list-inside space-y-1 mt-1">
+                                <ul className="text-xs sm:text-sm list-disc list-inside space-y-1 mt-1">
                                   <li>
                                     Developed web applications using React
                                   </li>
@@ -663,8 +685,10 @@ export default function AnalysisPage() {
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-md font-medium">Skills</h4>
-                            <p className="text-sm">
+                            <h4 className="text-sm sm:text-base font-medium">
+                              Skills
+                            </h4>
+                            <p className="text-xs sm:text-sm">
                               JavaScript, React, HTML, CSS, Node.js,
                               <span className="bg-color-danger/20 px-1 mx-1 rounded">
                                 Git
@@ -682,16 +706,18 @@ export default function AnalysisPage() {
                         </div>
                         <div className="rounded-lg border p-4 space-y-4 border-color-success/20 dark:border-color-success/10">
                           <div>
-                            <h3 className="text-lg font-semibold">John Doe</h3>
-                            <p className="text-sm text-muted-foreground">
+                            <h3 className="text-base sm:text-lg font-semibold">
+                              John Doe
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               Software Developer
                             </p>
                           </div>
                           <div>
-                            <h4 className="text-md font-medium">
+                            <h4 className="text-sm sm:text-base font-medium">
                               Professional Summary
                             </h4>
-                            <p className="text-sm">
+                            <p className="text-xs sm:text-sm">
                               Results-driven Software Developer with 5 years of
                               experience in web development and application
                               design.
@@ -703,16 +729,18 @@ export default function AnalysisPage() {
                             </p>
                           </div>
                           <div>
-                            <h4 className="text-md font-medium">Experience</h4>
+                            <h4 className="text-sm sm:text-base font-medium">
+                              Experience
+                            </h4>
                             <div className="space-y-2">
                               <div>
-                                <p className="text-sm font-medium">
+                                <p className="text-xs sm:text-sm font-medium">
                                   Software Developer, ABC Company
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   01/2020 - Present
                                 </p>
-                                <ul className="text-sm list-disc list-inside space-y-1 mt-1">
+                                <ul className="text-xs sm:text-sm list-disc list-inside space-y-1 mt-1">
                                   <li>
                                     Developed web applications using React,
                                     increasing user engagement by 35%
@@ -741,8 +769,10 @@ export default function AnalysisPage() {
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-md font-medium">Skills</h4>
-                            <p className="text-sm">
+                            <h4 className="text-sm sm:text-base font-medium">
+                              Skills
+                            </h4>
+                            <p className="text-xs sm:text-sm">
                               JavaScript, React, HTML, CSS, Node.js, Git,
                               <span className="bg-color-success/20 px-1 mx-1 rounded">
                                 Python, SQL, Data Visualization, Project
@@ -754,10 +784,10 @@ export default function AnalysisPage() {
                       </TabsContent>
                     </Tabs>
                   </CardContent>
-                  <CardFooter className="flex flex-wrap justify-end gap-2">
+                  <CardFooter className="flex flex-col sm:flex-row flex-wrap justify-end gap-2">
                     <Button
                       variant="outline"
-                      className="gap-1.5 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20"
+                      className="gap-1.5 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
                       onClick={handleDownloadResume}
                     >
                       <Download size={16} />
@@ -767,7 +797,7 @@ export default function AnalysisPage() {
                     </Button>
                     {activeTab === "improved" && (
                       <Button
-                        className="gap-1.5 btn-gradient"
+                        className="gap-1.5 btn-gradient w-full sm:w-auto"
                         onClick={handleRegenerateResume}
                       >
                         <RefreshCw size={16} />
@@ -780,7 +810,7 @@ export default function AnalysisPage() {
                 <div className="flex justify-center">
                   <Button
                     size="lg"
-                    className="gap-1.5 btn-gradient"
+                    className="gap-1.5 btn-gradient w-full sm:w-auto"
                     onClick={handleStartNewAnalysis}
                   >
                     Start New Analysis

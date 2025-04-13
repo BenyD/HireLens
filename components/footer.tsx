@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  GithubLogo,
-  TwitterLogo,
-  LinkedinLogo,
-  Heart,
-} from "@phosphor-icons/react";
+import { Heart } from "@phosphor-icons/react";
 
 export default function Footer() {
   return (
@@ -44,31 +39,6 @@ export default function Footer() {
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Privacy
-            </Link>
-          </div>
-
-          <div className="flex gap-4">
-            <Link
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-            >
-              <GithubLogo
-                size={20}
-                className="text-muted-foreground hover:text-primary transition-colors"
-              />
-            </Link>
-            <Link
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-            >
-              <LinkedinLogo
-                size={20}
-                className="text-muted-foreground hover:text-primary transition-colors"
-              />
             </Link>
           </div>
         </div>

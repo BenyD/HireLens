@@ -1,17 +1,23 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { motion } from "framer-motion"
-import { ShieldCheck, Lock, Database, Eye, FileText } from "lucide-react"
+import { useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Header from "@/components/header";
+import Footer from "@/components/footer";
+import { motion } from "framer-motion";
+import { ShieldCheck, Lock, Database, Eye, FileText } from "lucide-react";
 
 export default function PrivacyPage() {
   // Scroll to top when component mounts
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -40,7 +46,9 @@ export default function PrivacyPage() {
                     <ShieldCheck size={24} className="text-primary" />
                     Our Privacy Commitment
                   </CardTitle>
-                  <CardDescription>How we protect your data and respect your privacy</CardDescription>
+                  <CardDescription>
+                    How we protect your data and respect your privacy
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
@@ -49,8 +57,10 @@ export default function PrivacyPage() {
                       No Account Required
                     </h3>
                     <p className="text-muted-foreground">
-                      HireLens is designed to be used without creating an account. We don't collect or store any
-                      personal information about you. You can use our service completely anonymously.
+                      HireLens is designed to be used without creating an
+                      account. We don't collect or store any personal
+                      information about you. You can use our service completely
+                      anonymously.
                     </p>
                   </div>
 
@@ -60,9 +70,10 @@ export default function PrivacyPage() {
                       Local Processing
                     </h3>
                     <p className="text-muted-foreground">
-                      Your resume and job description are processed locally in your browser. The data never leaves your
-                      device and is not stored on our servers. Once you close your browser, all your data is
-                      automatically deleted.
+                      Your resume and job description are processed locally in
+                      your browser. The data never leaves your device and is not
+                      stored on our servers. Once you close your browser, all
+                      your data is automatically deleted.
                     </p>
                   </div>
 
@@ -72,8 +83,9 @@ export default function PrivacyPage() {
                       No Tracking
                     </h3>
                     <p className="text-muted-foreground">
-                      We don't use cookies or any tracking technologies to monitor your behavior. We believe in
-                      providing a service that respects your privacy completely.
+                      We don't use cookies or any tracking technologies to
+                      monitor your behavior. We believe in providing a service
+                      that respects your privacy completely.
                     </p>
                   </div>
 
@@ -83,16 +95,18 @@ export default function PrivacyPage() {
                       Your Data Ownership
                     </h3>
                     <p className="text-muted-foreground">
-                      You retain full ownership of your resume and all data you provide. We do not claim any rights to
-                      your content and do not use it for any purpose other than providing you with analysis and
-                      suggestions.
+                      You retain full ownership of your resume and all data you
+                      provide. We do not claim any rights to your content and do
+                      not use it for any purpose other than providing you with
+                      analysis and suggestions.
                     </p>
                   </div>
 
                   <div className="border-t pt-4 mt-4">
                     <p className="text-sm text-muted-foreground">
-                      This privacy policy was last updated on March 17, 2025. If you have any questions or concerns
-                      about our privacy practices, please contact us at privacy@hirelens.com.
+                      This privacy policy was last updated on March 17, 2025. If
+                      you have any questions or concerns about our privacy
+                      practices, please contact us at benydishon@gmail.com.
                     </p>
                   </div>
                 </CardContent>
@@ -103,6 +117,5 @@ export default function PrivacyPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
-
