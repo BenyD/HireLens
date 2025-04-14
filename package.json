@@ -1,12 +1,15 @@
 {
-  "name": "my-v0-project",
+  "name": "hirelens",
   "version": "0.1.0",
   "private": true,
+  "description": "A modern hiring platform with AI-powered insights",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

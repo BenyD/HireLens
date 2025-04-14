@@ -261,7 +261,11 @@ export default function AnalysisPage() {
                         variant="outline"
                         className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
                         onClick={() =>
-                          document.querySelector('input[type="file"]')?.click()
+                          (
+                            document.querySelector(
+                              'input[type="file"]'
+                            ) as HTMLInputElement
+                          )?.click()
                         }
                       >
                         Browse Files
@@ -363,9 +367,11 @@ export default function AnalysisPage() {
                             variant="outline"
                             className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
                             onClick={() =>
-                              document
-                                .querySelector('input[type="file"]')
-                                ?.click()
+                              (
+                                document.querySelector(
+                                  'input[type="file"]'
+                                ) as HTMLInputElement
+                              )?.click()
                             }
                           >
                             Browse Files
