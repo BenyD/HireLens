@@ -12,6 +12,8 @@ import {
   Upload,
   X,
   Loader2,
+  Sparkles,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,8 +37,50 @@ import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { motion } from "framer-motion";
+import {
+  extractTextFromFile,
+  analyzeResume,
+  storeResume,
+  storeJobDescription,
+  storeAnalysis,
+} from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
 
 type UploadStep = "resume" | "job-description" | "analysis";
+
+type Suggestion = {
+  title: string;
+  description: string;
+  severity: "high" | "medium" | "low";
+  category: "skills" | "experience" | "format" | "keywords" | "education";
+  actionItems: string[];
+};
+
+interface Keyword {
+  entity_group: string;
+  score: number;
+  word: string;
+  start: number;
+  end: number;
+}
+
+type AnalysisResult = {
+  score: number;
+  suggestions: Suggestion[];
+  keywords: Keyword[];
+};
+
+function generateSessionId(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export default function AnalysisPage() {
   const [currentStep, setCurrentStep] = useState<UploadStep>("resume");
@@ -49,12 +93,11 @@ export default function AnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [atsScore, setAtsScore] = useState(0);
   const [improvedScore, setImprovedScore] = useState(0);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
+    null
+  );
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const router = useRouter();
-
-  // Scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
 
   const handleResumeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -82,52 +125,102 @@ export default function AnalysisPage() {
     }
   };
 
-  const handleResumeUpload = () => {
+  const handleResumeUpload = async () => {
     if (resumeFile) {
-      setCurrentStep("job-description");
+      try {
+        setIsLoading(true);
+        const resumeText = await extractTextFromFile(resumeFile);
+        // Generate a UUID for this session
+        const newSessionId = generateSessionId();
+        setSessionId(newSessionId);
+        await storeResume(newSessionId, resumeText);
+        setCurrentStep("job-description");
+        toast.success("Resume uploaded successfully");
+      } catch (error) {
+        toast.error("Failed to process resume");
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleJobDescriptionSubmit = () => {
-    if (
-      (activeTab === "paste" && jobDescriptionText.trim()) ||
-      (activeTab === "upload" && jobDescriptionFile)
-    ) {
+  const handleJobDescriptionSubmit = async () => {
+    try {
       setIsLoading(true);
+      let jobDescriptionContent = "";
+
+      if (activeTab === "paste") {
+        jobDescriptionContent = jobDescriptionText;
+      } else if (jobDescriptionFile) {
+        jobDescriptionContent = await extractTextFromFile(jobDescriptionFile);
+      }
+
+      if (!jobDescriptionContent) {
+        toast.error("Please provide a job description");
+        return;
+      }
+
+      if (!sessionId) {
+        toast.error("Session expired. Please upload your resume again.");
+        setCurrentStep("resume");
+        return;
+      }
+
+      const jobDescription = await storeJobDescription(
+        sessionId,
+        jobDescriptionContent
+      );
+      const { data: resume, error: resumeError } = await supabase
+        .from("resumes")
+        .select()
+        .eq("session_id", sessionId)
+        .single();
+
+      if (resumeError) throw resumeError;
+
+      const analysis = await analyzeResume(
+        resume.content,
+        jobDescriptionContent
+      );
+      await storeAnalysis(sessionId, resume.id, jobDescription.id, analysis);
+
+      setAnalysisResult(analysis);
       setCurrentStep("analysis");
 
-      // Simulate loading and analysis
-      setTimeout(() => {
-        setIsLoading(false);
+      // Animate scores based on analysis results
+      const atsScoreInterval = setInterval(() => {
+        setAtsScore((prev) => {
+          const next = prev + 1;
+          if (next >= Math.floor(analysis.score * 100)) {
+            clearInterval(atsScoreInterval);
+            return Math.floor(analysis.score * 100);
+          }
+          return next;
+        });
+      }, 30);
 
-        // Animate scores
-        const atsScoreInterval = setInterval(() => {
-          setAtsScore((prev) => {
-            const next = prev + 1;
-            if (next >= 68) {
-              clearInterval(atsScoreInterval);
-              return 68;
-            }
-            return next;
-          });
-        }, 30);
+      const improvedScoreInterval = setInterval(() => {
+        setImprovedScore((prev) => {
+          const next = prev + 1;
+          if (next >= Math.min(100, Math.floor(analysis.score * 100) + 20)) {
+            clearInterval(improvedScoreInterval);
+            return Math.min(100, Math.floor(analysis.score * 100) + 20);
+          }
+          return next;
+        });
+      }, 30);
 
-        const improvedScoreInterval = setInterval(() => {
-          setImprovedScore((prev) => {
-            const next = prev + 1;
-            if (next >= 92) {
-              clearInterval(improvedScoreInterval);
-              return 92;
-            }
-            return next;
-          });
-        }, 30);
-
-        return () => {
-          clearInterval(atsScoreInterval);
-          clearInterval(improvedScoreInterval);
-        };
-      }, 2000);
+      return () => {
+        clearInterval(atsScoreInterval);
+        clearInterval(improvedScoreInterval);
+      };
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast.error("Failed to analyze resume. Please try again later.");
+      setCurrentStep("job-description");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -138,77 +231,63 @@ export default function AnalysisPage() {
     setJobDescriptionText("");
     setAtsScore(0);
     setImprovedScore(0);
+    setAnalysisResult(null);
+    setSessionId(null);
   };
 
-  const handleDownloadResume = () => {
-    // In a real app, this would download the resume
-    alert(
-      `Downloading ${activeTab === "original" ? "original" : "improved"} resume`
-    );
+  const handleDownloadResume = async () => {
+    if (!resumeFile) return;
+
+    try {
+      const blob = new Blob([resumeFile.name], { type: "text/plain" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = resumeFile.name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast.error("Failed to download resume");
+      console.error(error);
+    }
   };
 
-  const handleRegenerateResume = () => {
-    // In a real app, this would regenerate the improved resume
-    alert("Regenerating improved resume");
+  const handleRegenerateResume = async () => {
+    if (!analysisResult) return;
+
+    try {
+      setIsLoading(true);
+      // Here you would implement the resume regeneration logic
+      // using the analysis results to improve the resume
+      toast.success("Resume regenerated successfully");
+    } catch (error) {
+      toast.error("Failed to regenerate resume");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const suggestions = [
-    {
-      id: "keywords",
-      title: "Missing Keywords",
-      description: "Your resume is missing key terms from the job description.",
-      items: [
-        "Add 'data visualization' to your skills section",
-        "Include 'project management' experience",
-        "Mention 'agile methodology' in your work experience",
-      ],
-      severity: "high",
-    },
-    {
-      id: "format",
-      title: "Format Improvements",
-      description: "Optimize your resume format for better ATS compatibility.",
-      items: [
-        "Use standard section headings (Experience, Education, Skills)",
-        "Remove tables and complex formatting",
-        "Ensure all dates are in MM/YYYY format",
-      ],
-      severity: "medium",
-    },
-    {
-      id: "content",
-      title: "Content Enhancements",
-      description: "Strengthen your resume content to better match the job.",
-      items: [
-        "Quantify your achievements with metrics",
-        "Tailor your professional summary to the role",
-        "Add relevant certifications",
-      ],
-      severity: "medium",
-    },
-    {
-      id: "skills",
-      title: "Skills Gap",
-      description: "Address skill gaps mentioned in the job description.",
-      items: [
-        "Highlight experience with SQL databases",
-        "Add any relevant Python programming experience",
-        "Include experience with data analysis tools",
-      ],
-      severity: "high",
-    },
-  ];
+  const handleSuggestionAction = (action: Suggestion["actionItems"]) => {
+    if (action) {
+      action.forEach((item) => {
+        console.log(`Action Item: ${item}`);
+      });
+    }
+  };
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: "high" | "medium" | "low" | string) => {
     switch (severity) {
       case "high":
-        return "bg-color-danger/10 text-color-danger hover:bg-color-danger/20 border-color-danger/20";
+        return "bg-red-100 text-red-800";
       case "medium":
-        return "bg-color-warning/10 text-color-warning hover:bg-color-warning/20 border-color-warning/20";
+        return "bg-yellow-100 text-yellow-800";
       case "low":
-        return "bg-color-success/10 text-color-success hover:bg-color-success/20 border-color-success/20";
+        return "bg-green-100 text-green-800";
       default:
-        return "bg-primary/10 text-primary hover:bg-primary/20 border-primary/20";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -429,398 +508,347 @@ export default function AnalysisPage() {
               </motion.div>
             )}
 
-            {currentStep === "analysis" && (
+            {currentStep === "analysis" && analysisResult && (
               <motion.div
-                className="mx-auto max-w-4xl space-y-6 md:space-y-8"
+                className="mx-auto max-w-4xl space-y-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
                 <div className="text-center space-y-2">
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter text-gradient">
+                  <h1 className="text-3xl font-bold tracking-tight">
                     Resume Analysis Results
                   </h1>
-                  <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
+                  <p className="text-muted-foreground">
                     Here's how your resume matches the job description and
                     suggestions for improvement.
                   </p>
                 </div>
 
-                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                  <Card className="card-highlight">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg sm:text-xl">
-                        Current ATS Score
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        How well your resume matches the job description
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="relative h-24 w-24 sm:h-32 sm:w-32">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-2xl sm:text-3xl md:text-4xl font-bold">
-                              {atsScore}%
-                            </span>
-                          </div>
-                          <svg className="h-full w-full" viewBox="0 0 100 100">
-                            <circle
-                              className="stroke-muted-foreground/20"
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              strokeWidth="10"
-                              fill="none"
-                            />
-                            <circle
-                              className="stroke-color-warning"
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              strokeWidth="10"
-                              fill="none"
-                              strokeLinecap="round"
-                              strokeDasharray={`${atsScore * 2.51} 251`}
-                              transform="rotate(-90 50 50)"
-                            />
-                          </svg>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-color-warning">
-                            {atsScore < 70 ? "Needs Improvement" : "Good Match"}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="card-highlight">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg sm:text-xl">
-                        Potential Improved Score
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        Expected score after implementing our suggestions
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="relative h-24 w-24 sm:h-32 sm:w-32">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-2xl sm:text-3xl md:text-4xl font-bold">
-                              {improvedScore}%
-                            </span>
-                          </div>
-                          <svg className="h-full w-full" viewBox="0 0 100 100">
-                            <circle
-                              className="stroke-muted-foreground/20"
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              strokeWidth="10"
-                              fill="none"
-                            />
-                            <circle
-                              className="stroke-color-success"
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              strokeWidth="10"
-                              fill="none"
-                              strokeLinecap="round"
-                              strokeDasharray={`${improvedScore * 2.51} 251`}
-                              transform="rotate(-90 50 50)"
-                            />
-                          </svg>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-color-success">
-                            Excellent Match
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Overall Score Section */}
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h2 className="text-2xl font-semibold mb-4">Overall Score</h2>
+                  <div className="flex items-center justify-center">
+                    <div className="w-48 h-48">
+                      <CircularProgressbar
+                        value={atsScore}
+                        text={`${atsScore}%`}
+                        styles={buildStyles({
+                          pathColor: `rgba(59, 130, 246, ${atsScore / 100})`,
+                          textColor: "#1f2937",
+                          trailColor: "#e5e7eb",
+                          textSize: "24px",
+                        })}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <Card className="card-highlight">
-                  <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">
-                      Improvement Suggestions
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Implement these changes to improve your resume's match
-                      with the job description
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Accordion type="single" collapsible className="w-full">
-                      {suggestions.map((suggestion) => (
-                        <AccordionItem
-                          key={suggestion.id}
-                          value={suggestion.id}
-                          className="border-b-primary/10"
+                {/* AI Analysis Section */}
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h2 className="text-2xl font-semibold mb-6">
+                    Resume Improvement Suggestions
+                  </h2>
+                  <div className="space-y-6">
+                    {analysisResult.suggestions.map(
+                      (suggestion: Suggestion, index: number) => (
+                        <div
+                          key={index}
+                          className={`p-6 rounded-lg border ${
+                            suggestion.severity === "high"
+                              ? "border-red-200 bg-red-50"
+                              : suggestion.severity === "medium"
+                              ? "border-yellow-200 bg-yellow-50"
+                              : "border-green-200 bg-green-50"
+                          }`}
                         >
-                          <AccordionTrigger className="flex items-center hover:text-primary text-sm sm:text-base">
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0">
                               {suggestion.severity === "high" ? (
-                                <AlertTriangle
-                                  size={16}
-                                  className="text-color-danger"
-                                />
+                                <div className="p-2 bg-red-100 rounded-full">
+                                  <svg
+                                    className="w-6 h-6 text-red-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                    />
+                                  </svg>
+                                </div>
+                              ) : suggestion.severity === "medium" ? (
+                                <div className="p-2 bg-yellow-100 rounded-full">
+                                  <svg
+                                    className="w-6 h-6 text-yellow-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                </div>
                               ) : (
-                                <CheckCircle
-                                  size={16}
-                                  className="text-color-warning"
-                                />
+                                <div className="p-2 bg-green-100 rounded-full">
+                                  <svg
+                                    className="w-6 h-6 text-green-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                </div>
                               )}
-                              <span>{suggestion.title}</span>
-                              <Badge
-                                className={`ml-2 text-xs ${getSeverityColor(
-                                  suggestion.severity
-                                )}`}
-                              >
-                                {suggestion.severity}
-                              </Badge>
                             </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4 pt-2">
-                              <p className="text-sm text-muted-foreground">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-semibold">
+                                  {suggestion.title}
+                                </h3>
+                                <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    suggestion.severity === "high"
+                                      ? "bg-red-100 text-red-800"
+                                      : suggestion.severity === "medium"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-green-100 text-green-800"
+                                  }`}
+                                >
+                                  {suggestion.severity.charAt(0).toUpperCase() +
+                                    suggestion.severity.slice(1)}{" "}
+                                  Priority
+                                </span>
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                  {suggestion.category.charAt(0).toUpperCase() +
+                                    suggestion.category.slice(1)}
+                                </span>
+                              </div>
+                              <p className="text-gray-600 mb-4">
                                 {suggestion.description}
                               </p>
-                              <ul className="space-y-2">
-                                {suggestion.items.map((item, index) => (
-                                  <li
-                                    key={index}
-                                    className="flex items-start gap-2 text-sm"
-                                  >
-                                    <ArrowRight
-                                      size={16}
-                                      className="mt-0.5 text-primary"
-                                    />
-                                    <span>{item}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </CardContent>
-                </Card>
-
-                <Card className="card-highlight">
-                  <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">
-                      Resume Comparison
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Compare your original resume with our improved version
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Tabs
-                      defaultValue="original"
-                      onValueChange={setActiveTab}
-                      className="w-full"
-                    >
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="original">
-                          Original Resume
-                        </TabsTrigger>
-                        <TabsTrigger value="improved">
-                          Improved Resume
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="original" className="mt-4 space-y-4">
-                        <div className="rounded-lg border bg-muted/40 p-4 border-primary/20 dark:border-primary/10">
-                          <p className="text-sm text-muted-foreground">
-                            This is a preview of your original resume. We've
-                            highlighted areas that could be improved.
-                          </p>
-                        </div>
-                        <div className="rounded-lg border p-4 space-y-4 border-primary/20 dark:border-primary/10">
-                          <div>
-                            <h3 className="text-base sm:text-lg font-semibold">
-                              John Doe
-                            </h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              Software Developer
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="text-sm sm:text-base font-medium">
-                              Professional Summary
-                            </h4>
-                            <p className="text-xs sm:text-sm">
-                              Software developer with 5 years of experience in
-                              web development and application design.
-                              <span className="bg-color-danger/20 px-1 mx-1 rounded">
-                                Proficient in JavaScript and React.
-                              </span>
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="text-sm sm:text-base font-medium">
-                              Experience
-                            </h4>
-                            <div className="space-y-2">
-                              <div>
-                                <p className="text-xs sm:text-sm font-medium">
-                                  Software Developer, ABC Company
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Jan 2020 - Present
-                                </p>
-                                <ul className="text-xs sm:text-sm list-disc list-inside space-y-1 mt-1">
-                                  <li>
-                                    Developed web applications using React
-                                  </li>
-                                  <li>
-                                    <span className="bg-color-danger/20 px-1 rounded">
-                                      Collaborated with design team on UI/UX
-                                      improvements
-                                    </span>
-                                  </li>
-                                  <li>Implemented RESTful APIs</li>
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-900">
+                                  Action Items:
+                                </h4>
+                                <ul className="list-disc list-inside space-y-1 text-gray-600">
+                                  {suggestion.actionItems.map(
+                                    (item, itemIndex) => (
+                                      <li key={itemIndex} className="text-sm">
+                                        {item}
+                                      </li>
+                                    )
+                                  )}
                                 </ul>
                               </div>
                             </div>
                           </div>
-                          <div>
-                            <h4 className="text-sm sm:text-base font-medium">
-                              Skills
-                            </h4>
-                            <p className="text-xs sm:text-sm">
-                              JavaScript, React, HTML, CSS, Node.js,
-                              <span className="bg-color-danger/20 px-1 mx-1 rounded">
-                                Git
-                              </span>
-                            </p>
-                          </div>
                         </div>
-                      </TabsContent>
-                      <TabsContent value="improved" className="mt-4 space-y-4">
-                        <div className="rounded-lg border bg-muted/40 p-4 border-color-success/20 dark:border-color-success/10">
-                          <p className="text-sm text-muted-foreground">
-                            This is how your resume could look after
-                            implementing our suggestions.
-                          </p>
-                        </div>
-                        <div className="rounded-lg border p-4 space-y-4 border-color-success/20 dark:border-color-success/10">
-                          <div>
-                            <h3 className="text-base sm:text-lg font-semibold">
-                              John Doe
-                            </h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              Software Developer
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="text-sm sm:text-base font-medium">
-                              Professional Summary
-                            </h4>
-                            <p className="text-xs sm:text-sm">
-                              Results-driven Software Developer with 5 years of
-                              experience in web development and application
-                              design.
-                              <span className="bg-color-success/20 px-1 mx-1 rounded">
-                                Proficient in JavaScript, React, and data
-                                visualization with a strong background in
-                                project management and agile methodologies.
-                              </span>
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="text-sm sm:text-base font-medium">
-                              Experience
-                            </h4>
-                            <div className="space-y-2">
-                              <div>
-                                <p className="text-xs sm:text-sm font-medium">
-                                  Software Developer, ABC Company
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  01/2020 - Present
-                                </p>
-                                <ul className="text-xs sm:text-sm list-disc list-inside space-y-1 mt-1">
-                                  <li>
-                                    Developed web applications using React,
-                                    increasing user engagement by 35%
-                                  </li>
-                                  <li>
-                                    <span className="bg-color-success/20 px-1 rounded">
-                                      Led UI/UX improvements using data
-                                      visualization techniques, resulting in a
-                                      28% improvement in user satisfaction
-                                    </span>
-                                  </li>
-                                  <li>
-                                    <span className="bg-color-success/20 px-1 rounded">
-                                      Implemented RESTful APIs and SQL databases
-                                      for data-driven applications
-                                    </span>
-                                  </li>
-                                  <li>
-                                    <span className="bg-color-success/20 px-1 rounded">
-                                      Managed project timelines and resources
-                                      using agile methodology
-                                    </span>
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="text-sm sm:text-base font-medium">
-                              Skills
-                            </h4>
-                            <p className="text-xs sm:text-sm">
-                              JavaScript, React, HTML, CSS, Node.js, Git,
-                              <span className="bg-color-success/20 px-1 mx-1 rounded">
-                                Python, SQL, Data Visualization, Project
-                                Management, Agile Methodology
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                  <CardFooter className="flex flex-col sm:flex-row flex-wrap justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      className="gap-1.5 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary dark:border-primary/30 dark:hover:bg-primary/20 w-full sm:w-auto"
-                      onClick={handleDownloadResume}
-                    >
-                      <Download size={16} />
-                      Download{" "}
-                      {activeTab === "original" ? "Original" : "Improved"}{" "}
-                      Resume
-                    </Button>
-                    {activeTab === "improved" && (
-                      <Button
-                        className="gap-1.5 btn-gradient w-full sm:w-auto"
-                        onClick={handleRegenerateResume}
-                      >
-                        <RefreshCw size={16} />
-                        Regenerate Improved Resume
-                      </Button>
+                      )
                     )}
-                  </CardFooter>
-                </Card>
+                  </div>
+                </div>
 
-                <div className="flex justify-center">
+                {/* Key Skills Section */}
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h2 className="text-2xl font-semibold mb-6">Key Skills</h2>
+                  <div className="space-y-6">
+                    {/* Group skills by category */}
+                    {Object.entries(
+                      analysisResult.keywords.reduce(
+                        (acc: { [key: string]: string[] }, keyword) => {
+                          const category = keyword.entity_group.toLowerCase();
+                          if (!acc[category]) {
+                            acc[category] = [];
+                          }
+                          acc[category].push(keyword.word);
+                          return acc;
+                        },
+                        {}
+                      )
+                    ).map(([category, skills]) => (
+                      <div key={category} className="space-y-3">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                          {/* Category icons */}
+                          {category === "programming" && (
+                            <svg
+                              className="w-5 h-5 text-blue-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                              />
+                            </svg>
+                          )}
+                          {category === "frameworks" && (
+                            <svg
+                              className="w-5 h-5 text-purple-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                              />
+                            </svg>
+                          )}
+                          {category === "databases" && (
+                            <svg
+                              className="w-5 h-5 text-green-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm8 11c.8 0 1.5-.7 1.5-1.5S12.8 15 12 15s-1.5.7-1.5 1.5S11.2 18 12 18z"
+                              />
+                            </svg>
+                          )}
+                          {category === "cloud" && (
+                            <svg
+                              className="w-5 h-5 text-cyan-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                              />
+                            </svg>
+                          )}
+                          {category === "ai_ml" && (
+                            <svg
+                              className="w-5 h-5 text-indigo-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                            </svg>
+                          )}
+                          {category === "soft_skills" && (
+                            <svg
+                              className="w-5 h-5 text-yellow-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                              />
+                            </svg>
+                          )}
+                          {category === "tools" && (
+                            <svg
+                              className="w-5 h-5 text-red-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                          )}
+                          {category
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")}
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {skills.map((skill, index) => (
+                            <span
+                              key={index}
+                              className={`px-3 py-1.5 text-sm font-medium rounded-full ${
+                                category === "programming"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : category === "frameworks"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : category === "databases"
+                                  ? "bg-green-100 text-green-800"
+                                  : category === "cloud"
+                                  ? "bg-cyan-100 text-cyan-800"
+                                  : category === "ai_ml"
+                                  ? "bg-indigo-100 text-indigo-800"
+                                  : category === "soft_skills"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {analysisResult.keywords.length === 0 && (
+                    <p className="text-gray-500 text-center py-4">
+                      No key skills identified in the job description.
+                    </p>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
-                    size="lg"
-                    className="gap-1.5 btn-gradient w-full sm:w-auto"
+                    variant="outline"
                     onClick={handleStartNewAnalysis}
+                    className="gap-2"
                   >
+                    <RefreshCw className="h-4 w-4" />
                     Start New Analysis
-                    <ArrowRight size={16} />
+                  </Button>
+                  <Button onClick={handleDownloadResume} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Download Resume
                   </Button>
                 </div>
               </motion.div>
