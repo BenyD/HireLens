@@ -209,29 +209,340 @@ interface Keyword {
   end: number;
 }
 
-function calculateScore(analysis: any, keywords: Keyword[]): number {
-  // Base score from model confidence (0.5 weight)
-  const modelScore = analysis?.scores?.[0] || 0.5;
+interface ScoreFactors {
+  modelConfidence: number;
+  keywordMatches: number;
+  labelRelevance: number;
+  experienceAlignment: number;
+  skillDiversity: number;
+  formatQuality: number;
+  educationMatch: number;
+  industryAlign: number;
+}
 
-  // Keyword match score (0.3 weight)
+interface ScoreBreakdown {
+  currentScore: number;
+  potentialScore: number;
+  improvements: {
+    category: string;
+    current: number;
+    potential: number;
+    suggestedImprovements: string[];
+  }[];
+}
+
+function calculateDetailedScore(
+  analysis: any,
+  keywords: Keyword[],
+  resumeText: string,
+  jobDescriptionText: string
+): ScoreBreakdown {
+  // Calculate current scores for each factor
+  const currentScores = {
+    modelConfidence: analysis?.scores?.[0] || 0.5,
+    keywordMatch: calculateKeywordScore(keywords),
+    labelRelevance: calculateLabelScore(analysis?.labels?.[0]),
+    experienceAlign: calculateExperienceAlignment(
+      resumeText,
+      jobDescriptionText
+    ),
+    skillDiversity: calculateSkillDiversity(keywords),
+    formatQuality: evaluateFormatQuality(resumeText),
+    educationMatch: evaluateEducationMatch(resumeText, jobDescriptionText),
+    industryAlign: calculateIndustryAlignment(resumeText, jobDescriptionText),
+  };
+
+  // Calculate potential improvements for each factor
+  const improvements = [];
+  let currentTotal = 0;
+  let potentialTotal = 0;
+
+  // Weights for each factor
+  const weights = {
+    modelConfidence: 0.15,
+    keywordMatch: 0.2,
+    labelRelevance: 0.1,
+    experienceAlign: 0.15,
+    skillDiversity: 0.1,
+    formatQuality: 0.1,
+    educationMatch: 0.1,
+    industryAlign: 0.1,
+  };
+
+  // Calculate scores and potential improvements for each factor
+  for (const [factor, currentScore] of Object.entries(currentScores)) {
+    const weight = weights[factor as keyof typeof weights];
+    const weightedCurrent = currentScore * weight;
+    currentTotal += weightedCurrent;
+
+    // Calculate potential improvement for each factor
+    const potentialScore = calculatePotentialScore(factor, currentScore);
+    const weightedPotential = potentialScore * weight;
+    potentialTotal += weightedPotential;
+
+    improvements.push({
+      category: factor,
+      current: weightedCurrent,
+      potential: weightedPotential,
+      suggestedImprovements: generateImprovementSuggestions(
+        factor,
+        currentScore,
+        potentialScore
+      ),
+    });
+  }
+
+  return {
+    currentScore: currentTotal,
+    potentialScore: potentialTotal,
+    improvements,
+  };
+}
+
+function calculatePotentialScore(factor: string, currentScore: number): number {
+  // Define maximum achievable improvement for each factor
+  const maxImprovements = {
+    modelConfidence: 0.2, // Can improve by up to 20%
+    keywordMatch: 0.3, // Can improve by up to 30%
+    labelRelevance: 0.15, // Can improve by up to 15%
+    experienceAlign: 0.25, // Can improve by up to 25%
+    skillDiversity: 0.2, // Can improve by up to 20%
+    formatQuality: 0.35, // Can improve by up to 35%
+    educationMatch: 0.2, // Can improve by up to 20%
+    industryAlign: 0.15, // Can improve by up to 15%
+  };
+
+  const maxImprovement =
+    maxImprovements[factor as keyof typeof maxImprovements] || 0.2;
+  return Math.min(1, currentScore + maxImprovement);
+}
+
+function evaluateEducationMatch(
+  resumeText: string,
+  jobDescriptionText: string
+): number {
+  const educationKeywords = [
+    "bachelor's",
+    "master's",
+    "phd",
+    "doctorate",
+    "degree",
+    "certification",
+    "certified",
+    "license",
+    "diploma",
+  ];
+
+  const requiredEducation = educationKeywords.filter((keyword) =>
+    jobDescriptionText.toLowerCase().includes(keyword)
+  );
+
+  const matchedEducation = requiredEducation.filter((keyword) =>
+    resumeText.toLowerCase().includes(keyword)
+  );
+
+  return requiredEducation.length > 0
+    ? matchedEducation.length / requiredEducation.length
+    : 1;
+}
+
+function calculateIndustryAlignment(
+  resumeText: string,
+  jobDescriptionText: string
+): number {
+  // Extract industry-specific terms from job description
+  const industryTerms = extractIndustryTerms(jobDescriptionText);
+
+  // Count how many industry terms appear in the resume
+  const matchedTerms = industryTerms.filter((term) =>
+    resumeText.toLowerCase().includes(term.toLowerCase())
+  );
+
+  return industryTerms.length > 0
+    ? matchedTerms.length / industryTerms.length
+    : 0.5;
+}
+
+function extractIndustryTerms(text: string): string[] {
+  // Common industry sectors and related terms
+  const industryKeywords = {
+    technology: [
+      "software",
+      "IT",
+      "tech",
+      "digital",
+      "cyber",
+      "web",
+      "cloud",
+      "data",
+    ],
+    finance: [
+      "banking",
+      "investment",
+      "financial",
+      "trading",
+      "accounting",
+      "fintech",
+    ],
+    healthcare: [
+      "medical",
+      "healthcare",
+      "clinical",
+      "patient",
+      "health",
+      "pharmaceutical",
+    ],
+    marketing: [
+      "marketing",
+      "advertising",
+      "brand",
+      "digital marketing",
+      "social media",
+    ],
+    manufacturing: [
+      "manufacturing",
+      "production",
+      "assembly",
+      "quality control",
+      "operations",
+    ],
+    // Add more industries as needed
+  };
+
+  const foundTerms = new Set<string>();
+
+  Object.values(industryKeywords).forEach((terms) => {
+    terms.forEach((term) => {
+      if (text.toLowerCase().includes(term.toLowerCase())) {
+        foundTerms.add(term);
+      }
+    });
+  });
+
+  return Array.from(foundTerms);
+}
+
+function generateImprovementSuggestions(
+  factor: string,
+  currentScore: number,
+  potentialScore: number
+): string[] {
+  const gap = potentialScore - currentScore;
+  if (gap < 0.1) return []; // No significant improvement needed
+
+  const suggestions: { [key: string]: string[] } = {
+    modelConfidence: [
+      "Align your resume more closely with the job requirements",
+      "Use more industry-specific terminology",
+      "Highlight relevant achievements more prominently",
+    ],
+    keywordMatch: [
+      "Add missing keywords from the job description",
+      "Use variations of key terms",
+      "Include industry-standard abbreviations",
+    ],
+    formatQuality: [
+      "Improve section organization",
+      "Add more quantifiable achievements",
+      "Use consistent formatting throughout",
+    ],
+    // Add more suggestions for other factors
+  };
+
+  return (
+    suggestions[factor] || ["Review and enhance this aspect of your resume"]
+  );
+}
+
+function calculateExperienceAlignment(
+  resumeText: string,
+  jobDescriptionText: string
+): number {
+  // Extract years of experience from both texts
+  const resumeExperience = extractExperienceYears(resumeText);
+  const jobExperience = extractExperienceYears(jobDescriptionText);
+
+  // Calculate alignment score based on experience match
+  if (resumeExperience >= jobExperience) return 1.0;
+  if (resumeExperience >= jobExperience * 0.8) return 0.8;
+  if (resumeExperience >= jobExperience * 0.6) return 0.6;
+  return 0.4;
+}
+
+function calculateSkillDiversity(keywords: Keyword[]): number {
+  // Group keywords by category
+  const categories = new Set(keywords.map((k) => k.entity_group));
+  const uniqueSkills = new Set(keywords.map((k) => k.word));
+
+  // Calculate diversity score based on:
+  // 1. Number of different skill categories (40% weight)
+  // 2. Number of unique skills (60% weight)
+  const categoryScore = Math.min(categories.size / 7, 1); // 7 is the number of skill categories
+  const uniqueSkillsScore = Math.min(uniqueSkills.size / 20, 1); // Normalize to max 20 skills
+
+  return categoryScore * 0.4 + uniqueSkillsScore * 0.6;
+}
+
+function evaluateFormatQuality(resumeText: string): number {
+  // Check for common formatting issues
+  const hasSections = /(experience|education|skills|summary)/i.test(resumeText);
+  const hasBulletPoints = /\n\s*[•\-*]\s/.test(resumeText);
+  const hasQuantifiableAchievements = /\d+%|\$\d+|\d+\s*(years|months)/i.test(
+    resumeText
+  );
+  const hasActionVerbs =
+    /(managed|led|developed|implemented|achieved|increased|decreased)/i.test(
+      resumeText
+    );
+
+  // Calculate format score based on presence of key elements
+  let score = 0;
+  if (hasSections) score += 0.3;
+  if (hasBulletPoints) score += 0.2;
+  if (hasQuantifiableAchievements) score += 0.3;
+  if (hasActionVerbs) score += 0.2;
+
+  return score;
+}
+
+function extractExperienceYears(text: string): number {
+  // Extract years of experience using regex patterns
+  const patterns = [
+    /(\d+)\s*(?:years?|yrs?)\s*(?:of\s*)?experience/i,
+    /(\d+)\s*(?:years?|yrs?)\s*(?:in\s*)?(?:the\s*)?(?:field|industry)/i,
+    /(\d+)\s*(?:years?|yrs?)\s*(?:working|professional)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+  }
+
+  // If no explicit years found, estimate based on content length and keywords
+  const hasSeniorKeywords = /(senior|lead|principal|manager|director)/i.test(
+    text
+  );
+  const hasJuniorKeywords = /(junior|entry|associate|assistant)/i.test(text);
+
+  if (hasSeniorKeywords) return 5;
+  if (hasJuniorKeywords) return 1;
+  return 3; // Default to mid-level experience
+}
+
+function calculateKeywordScore(keywords: Keyword[]): number {
   const requiredKeywords = keywords.length;
-  const keywordScore =
-    requiredKeywords > 0
-      ? keywords.filter((k) => k.score > 0.7).length / requiredKeywords
-      : 0;
+  const keywordMatches = keywords.filter((k) => k.score > 0.7).length;
+  return requiredKeywords > 0 ? keywordMatches / requiredKeywords : 0;
+}
 
-  // Label score (0.2 weight)
-  const labelScore =
-    analysis?.labels?.[0] === "highly relevant to job"
-      ? 1
-      : analysis?.labels?.[0] === "somewhat relevant to job"
-      ? 0.6
-      : 0.2;
-
-  // Weighted average
-  const finalScore = modelScore * 0.5 + keywordScore * 0.3 + labelScore * 0.2;
-
-  return finalScore;
+function calculateLabelScore(label: string | undefined): number {
+  return label === "highly relevant to job"
+    ? 1
+    : label === "somewhat relevant to job"
+    ? 0.6
+    : 0.2;
 }
 
 export async function POST(request: Request) {
@@ -258,8 +569,13 @@ export async function POST(request: Request) {
     // Extract keywords using our enhanced function
     const keywords = await extractKeywords(jobDescriptionText);
 
-    // Calculate the final score
-    const score = calculateScore(analysis, keywords);
+    // Calculate the detailed score breakdown
+    const scoreBreakdown = calculateDetailedScore(
+      analysis,
+      keywords,
+      resumeText,
+      jobDescriptionText
+    );
 
     // Define categories for suggestions
     const categories = [
@@ -376,7 +692,9 @@ Provide detailed analysis and suggestions:`;
     ];
 
     const result = {
-      score,
+      score: scoreBreakdown.currentScore,
+      potentialScore: scoreBreakdown.potentialScore,
+      improvements: scoreBreakdown.improvements,
       suggestions: formattedSuggestions,
       keywords: Array.isArray(keywords) ? keywords : [],
     };
