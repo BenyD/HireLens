@@ -120,10 +120,10 @@ export default function FAQPage() {
                 <p className="text-muted-foreground">
                   Still have questions? Contact us at{" "}
                   <a
-                    href="mailto:benydishon@gmail.com"
+                    href="mailto:ashwiniee03@gmail.com "
                     className="text-primary hover:underline"
                   >
-                    benydishon@gmail.com
+                    ashwiniee03@gmail.com
                   </a>
                 </p>
               </div>

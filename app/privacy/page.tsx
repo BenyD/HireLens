@@ -106,7 +106,7 @@ export default function PrivacyPage() {
                     <p className="text-sm text-muted-foreground">
                       This privacy policy was last updated on March 17, 2025. If
                       you have any questions or concerns about our privacy
-                      practices, please contact us at benydishon@gmail.com.
+                      practices, please contact us at ashwiniee03@gmail.com .
                     </p>
                   </div>
                 </CardContent>

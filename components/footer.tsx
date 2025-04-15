@@ -58,7 +58,7 @@ export default function Footer() {
               />{" "}
               by
               <span className="font-medium text-primary ml-1">
-                Beny Dishon K
+                Ashwini M, Sneh Kushwaha, Venkata Srinath
               </span>
             </p>
           </div>
