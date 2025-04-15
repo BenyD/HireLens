@@ -68,10 +68,30 @@ interface Keyword {
   end: number;
 }
 
+interface EnhancedSkill {
+  word: string;
+  score: number;
+  proficiencyLevel: "expert" | "advanced" | "intermediate" | "beginner";
+  description: string;
+  yearsOfExperience?: number;
+  lastUsed?: string;
+  category: string;
+  subcategory?: string;
+  importance: "critical" | "recommended" | "nice-to-have";
+}
+
+interface SkillGap {
+  category: string;
+  matched: EnhancedSkill[];
+  missing: EnhancedSkill[];
+  importance: "critical" | "recommended" | "nice-to-have";
+}
+
 type AnalysisResult = {
   score: number;
   suggestions: Suggestion[];
   keywords: Keyword[];
+  skillGaps?: SkillGap[];
 };
 
 function generateSessionId(): string {
@@ -80,6 +100,257 @@ function generateSessionId(): string {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+}
+
+function SkillsAnalysis({ skillGaps }: { skillGaps: SkillGap[] }) {
+  // Sort categories to prioritize technical skills
+  const sortedSkillGaps = [...skillGaps].sort((a, b) => {
+    const technicalCategories = [
+      "programming",
+      "frameworks",
+      "databases",
+      "cloud",
+      "ai_ml",
+      "security",
+    ];
+    const aIsTechnical = technicalCategories.includes(a.category.toLowerCase());
+    const bIsTechnical = technicalCategories.includes(b.category.toLowerCase());
+
+    if (aIsTechnical && !bIsTechnical) return -1;
+    if (!aIsTechnical && bIsTechnical) return 1;
+    return 0;
+  });
+
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold">Technical Skills Analysis</h2>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="bg-green-50 text-green-700">
+            Present in Resume
+          </Badge>
+          <Badge variant="outline" className="bg-red-50 text-red-700">
+            Missing Required
+          </Badge>
+        </div>
+      </div>
+
+      <div className="space-y-8">
+        {sortedSkillGaps.map((category, index) => (
+          <div key={index} className="border rounded-lg p-6">
+            {/* Category Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-semibold">{category.category}</h3>
+                <Badge
+                  variant="outline"
+                  className={
+                    category.importance === "critical"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-blue-100 text-blue-700"
+                  }
+                >
+                  {category.missing.filter((s) => s.importance === "critical")
+                    .length > 0
+                    ? "Critical Gaps"
+                    : "Required Skills"}
+                </Badge>
+              </div>
+              <div className="text-sm text-gray-500">
+                {Math.round(
+                  (category.matched.length /
+                    (category.matched.length + category.missing.length)) *
+                    100
+                )}
+                % Match
+              </div>
+            </div>
+
+            {/* Skills Grid */}
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+              {/* Present Skills */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Present Skills
+                </h4>
+                {category.matched.map((skill, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-green-50 border border-green-100 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{skill.word}</span>
+                      <div className="flex gap-2">
+                        {skill.subcategory && (
+                          <Badge variant="outline" className="text-xs">
+                            {skill.subcategory}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant="outline"
+                          className={
+                            skill.proficiencyLevel === "expert"
+                              ? "bg-purple-50 text-purple-700"
+                              : skill.proficiencyLevel === "advanced"
+                              ? "bg-blue-50 text-blue-700"
+                              : skill.proficiencyLevel === "intermediate"
+                              ? "bg-green-50 text-green-700"
+                              : "bg-gray-50 text-gray-700"
+                          }
+                        >
+                          {skill.proficiencyLevel}
+                        </Badge>
+                      </div>
+                    </div>
+                    {skill.yearsOfExperience && (
+                      <div className="text-sm text-gray-600">
+                        {skill.yearsOfExperience} years of experience
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Missing Skills */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Missing Required Skills
+                </h4>
+                {category.missing.map((skill, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-red-50 border border-red-100 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{skill.word}</span>
+                      <div className="flex gap-2">
+                        {skill.subcategory && (
+                          <Badge variant="outline" className="text-xs">
+                            {skill.subcategory}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant="outline"
+                          className={
+                            skill.importance === "critical"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }
+                        >
+                          {skill.importance}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-sm space-y-2">
+                      <div className="text-gray-600">
+                        This skill is {skill.importance} for the position.
+                      </div>
+                      {skill.importance === "critical" && (
+                        <div className="text-red-600 font-medium">
+                          High priority - Required for this role
+                        </div>
+                      )}
+                      <div className="mt-3">
+                        <h5 className="font-medium mb-1 text-gray-700">
+                          Related Skills to Consider:
+                        </h5>
+                        <div className="flex flex-wrap gap-2">
+                          {getRelatedSkills(skill.word, skill.subcategory).map(
+                            (related, i) => (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className="bg-gray-50"
+                              >
+                                {related}
+                              </Badge>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Category Summary */}
+            <div className="mt-6 pt-4 border-t">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {category.matched.length}
+                  </div>
+                  <div className="text-sm text-gray-600">Present</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {category.missing.length}
+                  </div>
+                  <div className="text-sm text-gray-600">Missing</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {
+                      category.matched.filter(
+                        (s) => s.proficiencyLevel === "expert"
+                      ).length
+                    }
+                  </div>
+                  <div className="text-sm text-gray-600">Expert Level</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {
+                      category.missing.filter(
+                        (s) => s.importance === "critical"
+                      ).length
+                    }
+                  </div>
+                  <div className="text-sm text-gray-600">Critical Gaps</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Helper function to suggest related skills
+function getRelatedSkills(skillName: string, subcategory?: string): string[] {
+  const relatedSkillsMap: { [key: string]: string[] } = {
+    // Programming Languages
+    javascript: ["typescript", "node.js", "react", "vue.js"],
+    python: ["django", "flask", "fastapi", "numpy", "pandas"],
+    java: ["spring", "hibernate", "maven", "junit"],
+    // Frameworks
+    react: ["redux", "next.js", "react-query", "styled-components"],
+    angular: ["rxjs", "ngrx", "typescript", "material"],
+    vue: ["vuex", "nuxt.js", "composition api", "pinia"],
+    // Databases
+    postgresql: ["sql", "database design", "orm", "plpgsql"],
+    mongodb: ["mongoose", "nosql", "aggregation", "atlas"],
+    // Cloud
+    aws: ["ec2", "s3", "lambda", "cloudformation"],
+    docker: ["kubernetes", "docker-compose", "containerization"],
+    // AI/ML
+    tensorflow: ["keras", "deep learning", "neural networks", "python"],
+    "machine learning": ["scikit-learn", "pandas", "numpy", "jupyter"],
+    // Default related skills for unknown technologies
+    default: [
+      "relevant frameworks",
+      "best practices",
+      "testing",
+      "documentation",
+    ],
+  };
+
+  const normalizedSkill = skillName.toLowerCase();
+  return relatedSkillsMap[normalizedSkill] || relatedSkillsMap.default;
 }
 
 export default function AnalysisPage() {
@@ -247,25 +518,6 @@ export default function AnalysisPage() {
     setImprovedScore(0);
     setAnalysisResult(null);
     setSessionId(null);
-  };
-
-  const handleDownloadResume = async () => {
-    if (!resumeFile) return;
-
-    try {
-      const blob = new Blob([resumeFile.name], { type: "text/plain" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = resumeFile.name;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      toast.error("Failed to download resume");
-      console.error(error);
-    }
   };
 
   const handleRegenerateResume = async () => {
@@ -709,179 +961,10 @@ export default function AnalysisPage() {
                   </div>
                 </div>
 
-                {/* Key Skills Section */}
-                <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <h2 className="text-2xl font-semibold mb-6">Key Skills</h2>
-                  <div className="space-y-6">
-                    {/* Group skills by category */}
-                    {Object.entries(
-                      analysisResult.keywords.reduce(
-                        (acc: { [key: string]: string[] }, keyword) => {
-                          const category = keyword.entity_group.toLowerCase();
-                          if (!acc[category]) {
-                            acc[category] = [];
-                          }
-                          acc[category].push(keyword.word);
-                          return acc;
-                        },
-                        {}
-                      )
-                    ).map(([category, skills]) => (
-                      <div key={category} className="space-y-3">
-                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                          {/* Category icons */}
-                          {category === "programming" && (
-                            <svg
-                              className="w-5 h-5 text-blue-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                              />
-                            </svg>
-                          )}
-                          {category === "frameworks" && (
-                            <svg
-                              className="w-5 h-5 text-purple-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                              />
-                            </svg>
-                          )}
-                          {category === "databases" && (
-                            <svg
-                              className="w-5 h-5 text-green-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm8 11c.8 0 1.5-.7 1.5-1.5S12.8 15 12 15s-1.5.7-1.5 1.5S11.2 18 12 18z"
-                              />
-                            </svg>
-                          )}
-                          {category === "cloud" && (
-                            <svg
-                              className="w-5 h-5 text-cyan-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                              />
-                            </svg>
-                          )}
-                          {category === "ai_ml" && (
-                            <svg
-                              className="w-5 h-5 text-indigo-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              />
-                            </svg>
-                          )}
-                          {category === "soft_skills" && (
-                            <svg
-                              className="w-5 h-5 text-yellow-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                              />
-                            </svg>
-                          )}
-                          {category === "tools" && (
-                            <svg
-                              className="w-5 h-5 text-red-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                            </svg>
-                          )}
-                          {category
-                            .split("_")
-                            .map(
-                              (word) =>
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                            )
-                            .join(" ")}
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {skills.map((skill, index) => (
-                            <span
-                              key={index}
-                              className={`px-3 py-1.5 text-sm font-medium rounded-full ${
-                                category === "programming"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : category === "frameworks"
-                                  ? "bg-purple-100 text-purple-800"
-                                  : category === "databases"
-                                  ? "bg-green-100 text-green-800"
-                                  : category === "cloud"
-                                  ? "bg-cyan-100 text-cyan-800"
-                                  : category === "ai_ml"
-                                  ? "bg-indigo-100 text-indigo-800"
-                                  : category === "soft_skills"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {analysisResult.keywords.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">
-                      No key skills identified in the job description.
-                    </p>
-                  )}
-                </div>
+                {/* Skills Gap Analysis */}
+                {analysisResult.skillGaps && (
+                  <SkillsAnalysis skillGaps={analysisResult.skillGaps} />
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -892,10 +975,6 @@ export default function AnalysisPage() {
                   >
                     <RefreshCw className="h-4 w-4" />
                     Start New Analysis
-                  </Button>
-                  <Button onClick={handleDownloadResume} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download Resume
                   </Button>
                 </div>
               </motion.div>

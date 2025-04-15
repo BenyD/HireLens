@@ -545,6 +545,438 @@ function calculateLabelScore(label: string | undefined): number {
     : 0.2;
 }
 
+interface SkillAnalysis {
+  category: string;
+  matched: EnhancedSkill[];
+  missing: EnhancedSkill[];
+  importance: "critical" | "recommended" | "nice-to-have";
+}
+
+interface EnhancedSkill {
+  word: string;
+  score: number;
+  proficiencyLevel: "expert" | "advanced" | "intermediate" | "beginner";
+  description: string;
+  yearsOfExperience?: number;
+  lastUsed?: string;
+  category: string;
+  subcategory?: string;
+  importance: "critical" | "recommended" | "nice-to-have";
+}
+
+const SKILL_CATEGORIES = {
+  programming: {
+    languages: [
+      "javascript",
+      "typescript",
+      "python",
+      "java",
+      "c++",
+      "c#",
+      "ruby",
+      "php",
+      "swift",
+      "kotlin",
+      "rust",
+      "go",
+      "scala",
+      "perl",
+      "r",
+      "matlab",
+      "sql",
+      "dart",
+      "lua",
+      "shell",
+    ],
+    web: [
+      "html",
+      "css",
+      "sass",
+      "less",
+      "webgl",
+      "svg",
+      "canvas",
+      "web components",
+    ],
+    mobile: [
+      "react native",
+      "flutter",
+      "ionic",
+      "xamarin",
+      "android",
+      "ios",
+      "swift ui",
+      "jetpack compose",
+    ],
+  },
+  frameworks: {
+    frontend: [
+      "react",
+      "angular",
+      "vue",
+      "svelte",
+      "next.js",
+      "nuxt",
+      "gatsby",
+      "remix",
+      "tailwind",
+      "bootstrap",
+      "material-ui",
+      "chakra-ui",
+    ],
+    backend: [
+      "django",
+      "flask",
+      "fastapi",
+      "express",
+      "spring",
+      "laravel",
+      "ruby on rails",
+      "asp.net",
+      "nest.js",
+      "strapi",
+      "graphql",
+    ],
+    testing: [
+      "jest",
+      "cypress",
+      "selenium",
+      "playwright",
+      "mocha",
+      "junit",
+      "pytest",
+    ],
+  },
+  databases: {
+    relational: [
+      "postgresql",
+      "mysql",
+      "oracle",
+      "sqlite",
+      "sql server",
+      "mariadb",
+    ],
+    nosql: [
+      "mongodb",
+      "cassandra",
+      "redis",
+      "dynamodb",
+      "firebase",
+      "neo4j",
+      "elasticsearch",
+    ],
+    tools: ["prisma", "sequelize", "typeorm", "mongoose", "knex"],
+  },
+  cloud: {
+    platforms: [
+      "aws",
+      "azure",
+      "gcp",
+      "digitalocean",
+      "heroku",
+      "vercel",
+      "netlify",
+    ],
+    containerization: [
+      "docker",
+      "kubernetes",
+      "openshift",
+      "rancher",
+      "podman",
+    ],
+    infrastructure: [
+      "terraform",
+      "ansible",
+      "jenkins",
+      "gitlab ci",
+      "github actions",
+      "circleci",
+      "prometheus",
+      "grafana",
+    ],
+  },
+  ai_ml: {
+    frameworks: [
+      "tensorflow",
+      "pytorch",
+      "keras",
+      "scikit-learn",
+      "hugging face",
+      "opencv",
+    ],
+    specialties: [
+      "machine learning",
+      "deep learning",
+      "nlp",
+      "computer vision",
+      "reinforcement learning",
+      "data science",
+      "neural networks",
+    ],
+    tools: ["pandas", "numpy", "matplotlib", "jupyter", "rapids", "dask"],
+  },
+  soft_skills: {
+    leadership: [
+      "team leadership",
+      "project management",
+      "mentoring",
+      "strategic planning",
+      "decision making",
+      "conflict resolution",
+    ],
+    communication: [
+      "verbal communication",
+      "written communication",
+      "presentation skills",
+      "stakeholder management",
+      "technical writing",
+    ],
+    methodologies: ["agile", "scrum", "kanban", "lean", "waterfall", "devops"],
+  },
+  security: {
+    concepts: [
+      "cryptography",
+      "authentication",
+      "authorization",
+      "oauth",
+      "jwt",
+      "penetration testing",
+      "security auditing",
+    ],
+    tools: [
+      "burp suite",
+      "wireshark",
+      "metasploit",
+      "nmap",
+      "snyk",
+      "owasp zap",
+    ],
+    compliance: ["gdpr", "hipaa", "pci dss", "sox", "iso 27001"],
+  },
+  design: {
+    tools: [
+      "figma",
+      "sketch",
+      "adobe xd",
+      "photoshop",
+      "illustrator",
+      "indesign",
+    ],
+    concepts: [
+      "ui design",
+      "ux design",
+      "responsive design",
+      "accessibility",
+      "design systems",
+    ],
+    prototyping: ["invision", "principle", "framer", "proto.io"],
+  },
+};
+
+function determineSkillProficiency(
+  skill: string,
+  resumeText: string,
+  jobDescriptionText: string
+): EnhancedSkill["proficiencyLevel"] {
+  // Look for explicit proficiency indicators
+  const expertPatterns = [
+    new RegExp(`expert\\s+(?:in\\s+)?${skill}`, "i"),
+    new RegExp(`${skill}\\s+expert`, "i"),
+    new RegExp(`advanced\\s+${skill}`, "i"),
+    new RegExp(`(?:10|[5-9])\\+?\\s+years.*${skill}`, "i"),
+  ];
+
+  const advancedPatterns = [
+    new RegExp(`proficient\\s+(?:in\\s+)?${skill}`, "i"),
+    new RegExp(`${skill}\\s+proficiency`, "i"),
+    new RegExp(`(?:[3-4])\\+?\\s+years.*${skill}`, "i"),
+  ];
+
+  const intermediatePatterns = [
+    new RegExp(`intermediate\\s+(?:in\\s+)?${skill}`, "i"),
+    new RegExp(`${skill}\\s+intermediate`, "i"),
+    new RegExp(`(?:[1-2])\\+?\\s+years.*${skill}`, "i"),
+  ];
+
+  if (expertPatterns.some((pattern) => pattern.test(resumeText))) {
+    return "expert";
+  } else if (advancedPatterns.some((pattern) => pattern.test(resumeText))) {
+    return "advanced";
+  } else if (intermediatePatterns.some((pattern) => pattern.test(resumeText))) {
+    return "intermediate";
+  }
+  return "beginner";
+}
+
+function extractSkillYearsOfExperience(
+  skill: string,
+  text: string
+): number | undefined {
+  const patterns = [
+    new RegExp(`(\\d+)\\+?\\s+years?.*${skill}`, "i"),
+    new RegExp(`${skill}.*\\s+(\\d+)\\+?\\s+years?`, "i"),
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      return parseInt(match[1], 10);
+    }
+  }
+  return undefined;
+}
+
+function findSkillCategory(skill: string): {
+  category: string;
+  subcategory?: string;
+} {
+  for (const [category, subcategories] of Object.entries(SKILL_CATEGORIES)) {
+    for (const [subcategory, skills] of Object.entries(subcategories)) {
+      if (skills.includes(skill.toLowerCase())) {
+        return { category, subcategory };
+      }
+    }
+  }
+  return { category: "other" };
+}
+
+function generateSkillDescription(
+  skill: string,
+  proficiency: EnhancedSkill["proficiencyLevel"],
+  yearsOfExperience?: number
+): string {
+  const proficiencyDescriptions = {
+    expert: "Demonstrates mastery and can lead/teach others.",
+    advanced: "Strong understanding and extensive experience.",
+    intermediate: "Good working knowledge and some experience.",
+    beginner: "Basic understanding and limited experience.",
+  };
+
+  let description = `${proficiencyDescriptions[proficiency]} `;
+  if (yearsOfExperience) {
+    description += `${yearsOfExperience}+ years of experience. `;
+  }
+
+  return description.trim();
+}
+
+async function analyzeSkillGaps(
+  resumeText: string,
+  jobDescriptionText: string
+): Promise<SkillAnalysis[]> {
+  // Extract all skills from job description
+  const jobSkills = await extractKeywords(jobDescriptionText);
+  const resumeSkills = await extractKeywords(resumeText);
+
+  // Enhanced skill analysis
+  const enhancedSkills: EnhancedSkill[] = jobSkills.map((skill) => {
+    const proficiency = determineSkillProficiency(
+      skill.word,
+      resumeText,
+      jobDescriptionText
+    );
+    const yearsOfExperience = extractSkillYearsOfExperience(
+      skill.word,
+      resumeText
+    );
+    const { category, subcategory } = findSkillCategory(skill.word);
+    const importance = determineSkillImportance(
+      category,
+      0,
+      jobDescriptionText
+    );
+
+    return {
+      ...skill,
+      proficiencyLevel: proficiency,
+      yearsOfExperience,
+      description: generateSkillDescription(
+        skill.word,
+        proficiency,
+        yearsOfExperience
+      ),
+      category,
+      subcategory,
+      importance,
+    };
+  });
+
+  // Group by main categories
+  const categories = Array.from(
+    new Set(enhancedSkills.map((skill) => skill.category))
+  );
+
+  return categories.map((category) => {
+    const categorySkills = enhancedSkills.filter(
+      (skill) => skill.category === category
+    );
+    const resumeCategorySkills = resumeSkills.filter(
+      (skill) => findSkillCategory(skill.word).category === category
+    );
+
+    const matched = categorySkills.filter((jobSkill) =>
+      resumeCategorySkills.some(
+        (resumeSkill) =>
+          resumeSkill.word.toLowerCase() === jobSkill.word.toLowerCase()
+      )
+    );
+
+    const missing = categorySkills.filter(
+      (jobSkill) =>
+        !resumeCategorySkills.some(
+          (resumeSkill) =>
+            resumeSkill.word.toLowerCase() === jobSkill.word.toLowerCase()
+        )
+    );
+
+    return {
+      category,
+      matched,
+      missing,
+      importance: determineSkillImportance(
+        category,
+        missing.length,
+        jobDescriptionText
+      ),
+    };
+  });
+}
+
+function determineSkillImportance(
+  category: string,
+  missingCount: number,
+  jobDescription: string
+): "critical" | "recommended" | "nice-to-have" {
+  // Keywords that indicate requirement level
+  const requirementIndicators = {
+    critical: ["required", "must have", "essential", "necessary"],
+    recommended: ["preferred", "desired", "should have"],
+    niceToHave: ["nice to have", "plus", "beneficial"],
+  };
+
+  // Check if category is mentioned with requirement indicators
+  for (const [level, indicators] of Object.entries(requirementIndicators)) {
+    for (const indicator of indicators) {
+      const pattern = new RegExp(
+        `${indicator}.*?${category}|${category}.*?${indicator}`,
+        "i"
+      );
+      if (pattern.test(jobDescription)) {
+        return level === "critical"
+          ? "critical"
+          : level === "recommended"
+          ? "recommended"
+          : "nice-to-have";
+      }
+    }
+  }
+
+  // Default importance based on missing skills count
+  if (missingCount > 3) return "critical";
+  if (missingCount > 1) return "recommended";
+  return "nice-to-have";
+}
+
 export async function POST(request: Request) {
   try {
     const { resumeText, jobDescriptionText } = await request.json();
@@ -691,12 +1123,52 @@ Provide detailed analysis and suggestions:`;
       },
     ];
 
+    // Perform skill gap analysis
+    const skillGapAnalysis = await analyzeSkillGaps(
+      resumeText,
+      jobDescriptionText
+    );
+
+    // Generate skill-specific suggestions
+    const skillSuggestions = skillGapAnalysis
+      .filter((analysis) => analysis.missing.length > 0)
+      .map((analysis) => ({
+        title: `${analysis.category.toLowerCase()} Skills Gap`,
+        description: `Missing ${
+          analysis.missing.length
+        } ${analysis.category.toLowerCase()} skills required for this position.`,
+        severity:
+          analysis.importance === "critical"
+            ? "high"
+            : analysis.importance === "recommended"
+            ? "medium"
+            : "low",
+        category: "skills",
+        actionItems: [
+          `Add these missing ${analysis.category.toLowerCase()} skills: ${analysis.missing
+            .map((skill) => skill.word)
+            .join(", ")}`,
+          `Highlight any relevant experience with these technologies`,
+          `Consider obtaining certifications in: ${analysis.missing
+            .slice(0, 3)
+            .map((skill) => skill.word)
+            .join(", ")}`,
+        ],
+      }));
+
+    // Merge skill suggestions with other suggestions
+    const allSuggestions = [
+      ...skillSuggestions,
+      ...formattedSuggestions.filter((s) => s.category !== "skills"),
+    ];
+
     const result = {
       score: scoreBreakdown.currentScore,
       potentialScore: scoreBreakdown.potentialScore,
       improvements: scoreBreakdown.improvements,
-      suggestions: formattedSuggestions,
+      suggestions: allSuggestions,
       keywords: Array.isArray(keywords) ? keywords : [],
+      skillGaps: skillGapAnalysis, // Include detailed skill gap analysis in response
     };
 
     return new Response(JSON.stringify(result), {
