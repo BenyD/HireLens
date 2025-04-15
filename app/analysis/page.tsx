@@ -145,6 +145,48 @@ export default function AnalysisPage() {
     }
   };
 
+  useEffect(() => {
+    let atsScoreInterval: NodeJS.Timeout;
+    let improvedScoreInterval: NodeJS.Timeout;
+
+    if (analysisResult) {
+      const baseScore = Math.floor(analysisResult.score * 100);
+      // Calculate improved score based on implementing all suggestions
+      const potentialImprovement = analysisResult.suggestions.length * 5; // Each suggestion could improve score by 5%
+      const improvedScoreTarget = Math.min(
+        100,
+        baseScore + potentialImprovement
+      );
+
+      atsScoreInterval = setInterval(() => {
+        setAtsScore((prev) => {
+          const next = prev + 1;
+          if (next >= baseScore) {
+            clearInterval(atsScoreInterval);
+            return baseScore;
+          }
+          return next;
+        });
+      }, 30);
+
+      improvedScoreInterval = setInterval(() => {
+        setImprovedScore((prev) => {
+          const next = prev + 1;
+          if (next >= improvedScoreTarget) {
+            clearInterval(improvedScoreInterval);
+            return improvedScoreTarget;
+          }
+          return next;
+        });
+      }, 30);
+    }
+
+    return () => {
+      if (atsScoreInterval) clearInterval(atsScoreInterval);
+      if (improvedScoreInterval) clearInterval(improvedScoreInterval);
+    };
+  }, [analysisResult]);
+
   const handleJobDescriptionSubmit = async () => {
     try {
       setIsLoading(true);
@@ -187,34 +229,6 @@ export default function AnalysisPage() {
 
       setAnalysisResult(analysis);
       setCurrentStep("analysis");
-
-      // Animate scores based on analysis results
-      const atsScoreInterval = setInterval(() => {
-        setAtsScore((prev) => {
-          const next = prev + 1;
-          if (next >= Math.floor(analysis.score * 100)) {
-            clearInterval(atsScoreInterval);
-            return Math.floor(analysis.score * 100);
-          }
-          return next;
-        });
-      }, 30);
-
-      const improvedScoreInterval = setInterval(() => {
-        setImprovedScore((prev) => {
-          const next = prev + 1;
-          if (next >= Math.min(100, Math.floor(analysis.score * 100) + 20)) {
-            clearInterval(improvedScoreInterval);
-            return Math.min(100, Math.floor(analysis.score * 100) + 20);
-          }
-          return next;
-        });
-      }, 30);
-
-      return () => {
-        clearInterval(atsScoreInterval);
-        clearInterval(improvedScoreInterval);
-      };
     } catch (error) {
       console.error("Analysis error:", error);
       toast.error("Failed to analyze resume. Please try again later.");
@@ -527,21 +541,54 @@ export default function AnalysisPage() {
 
                 {/* Overall Score Section */}
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <h2 className="text-2xl font-semibold mb-4">Overall Score</h2>
-                  <div className="flex items-center justify-center">
-                    <div className="w-48 h-48">
-                      <CircularProgressbar
-                        value={atsScore}
-                        text={`${atsScore}%`}
-                        styles={buildStyles({
-                          pathColor: `rgba(59, 130, 246, ${atsScore / 100})`,
-                          textColor: "#1f2937",
-                          trailColor: "#e5e7eb",
-                          textSize: "24px",
-                        })}
-                      />
+                  <h2 className="text-2xl font-semibold mb-4">
+                    Resume Match Score
+                  </h2>
+                  <div className="flex items-center justify-around">
+                    <div className="flex flex-col items-center">
+                      <h3 className="text-lg font-medium mb-2">
+                        Current Score
+                      </h3>
+                      <div className="w-32 h-32">
+                        <CircularProgressbar
+                          value={atsScore}
+                          text={`${atsScore}%`}
+                          styles={buildStyles({
+                            pathColor: `rgba(59, 130, 246, ${atsScore / 100})`,
+                            textColor: "#1f2937",
+                            trailColor: "#e5e7eb",
+                            textSize: "20px",
+                          })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center text-2xl font-bold text-gray-400 mx-4">
+                      →
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <h3 className="text-lg font-medium mb-2">
+                        Potential Score
+                      </h3>
+                      <div className="w-32 h-32">
+                        <CircularProgressbar
+                          value={improvedScore}
+                          text={`${improvedScore}%`}
+                          styles={buildStyles({
+                            pathColor: `rgba(34, 197, 94, ${
+                              improvedScore / 100
+                            })`,
+                            textColor: "#1f2937",
+                            trailColor: "#e5e7eb",
+                            textSize: "20px",
+                          })}
+                        />
+                      </div>
                     </div>
                   </div>
+                  <p className="text-sm text-gray-500 text-center mt-4">
+                    Implement our suggestions to potentially improve your match
+                    score by {improvedScore - atsScore}%
+                  </p>
                 </div>
 
                 {/* AI Analysis Section */}

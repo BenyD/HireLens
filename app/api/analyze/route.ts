@@ -209,6 +209,31 @@ interface Keyword {
   end: number;
 }
 
+function calculateScore(analysis: any, keywords: Keyword[]): number {
+  // Base score from model confidence (0.5 weight)
+  const modelScore = analysis?.scores?.[0] || 0.5;
+
+  // Keyword match score (0.3 weight)
+  const requiredKeywords = keywords.length;
+  const keywordScore =
+    requiredKeywords > 0
+      ? keywords.filter((k) => k.score > 0.7).length / requiredKeywords
+      : 0;
+
+  // Label score (0.2 weight)
+  const labelScore =
+    analysis?.labels?.[0] === "highly relevant to job"
+      ? 1
+      : analysis?.labels?.[0] === "somewhat relevant to job"
+      ? 0.6
+      : 0.2;
+
+  // Weighted average
+  const finalScore = modelScore * 0.5 + keywordScore * 0.3 + labelScore * 0.2;
+
+  return finalScore;
+}
+
 export async function POST(request: Request) {
   try {
     const { resumeText, jobDescriptionText } = await request.json();
@@ -231,7 +256,10 @@ export async function POST(request: Request) {
     });
 
     // Extract keywords using our enhanced function
-    const keywords = extractKeywords(jobDescriptionText);
+    const keywords = await extractKeywords(jobDescriptionText);
+
+    // Calculate the final score
+    const score = calculateScore(analysis, keywords);
 
     // Define categories for suggestions
     const categories = [
@@ -285,7 +313,7 @@ Provide detailed analysis and suggestions:`;
         category: "skills",
         actionItems: [
           "Add missing technical skills: " +
-            (await keywords)
+            keywords
               .filter(
                 (k: Keyword) =>
                   k.entity_group === "PROGRAMMING" ||
@@ -316,7 +344,7 @@ Provide detailed analysis and suggestions:`;
         category: "keywords",
         actionItems: [
           "Include these key terms: " +
-            (await keywords).map((k: Keyword) => k.word).join(", "),
+            keywords.map((k: Keyword) => k.word).join(", "),
           "Naturally incorporate keywords into experience descriptions",
           "Ensure technical terms are properly capitalized",
         ],
@@ -348,7 +376,7 @@ Provide detailed analysis and suggestions:`;
     ];
 
     const result = {
-      score: analysis?.scores?.[0] || 0.5,
+      score,
       suggestions: formattedSuggestions,
       keywords: Array.isArray(keywords) ? keywords : [],
     };
